@@ -54,6 +54,8 @@ class Events():
 
             if self.args.spoiler_log and (event.rewards_log or event.changes_log):
                 log_strings.append(event.log_string())
+
+        log_strings.append("* = Esper/Magicite")
         space.write(field.Return())
 
         if self.args.spoiler_log:
@@ -77,7 +79,7 @@ class Events():
     def choose_single_possible_type_rewards(self, reward_slots):
         for slot in reward_slots:
             if slot.single_possible_type():
-                slot.id, slot.type = choose_reward(slot.possible_types, self.characters, self.espers, self.items)
+                slot.id, slot.type = choose_reward(slot.possible_types, self.characters, self.espers, self.items, exclude_character=[slot.check.gate_character])
 
     def choose_char_esper_possible_rewards(self, reward_slots):
         for slot in reward_slots:
@@ -96,8 +98,10 @@ class Events():
         # note: this includes start, which can get up to 4 characters
         self.choose_single_possible_type_rewards(reward_slots)
 
-        # find characters that were assigned to start
-        characters_available = [reward.id for reward in name_event["Start"].rewards]
+        readily_available_characters = [x.id for x in reward_slots if x.check and x.check.gate_character is None and x.possible_types == RewardType.CHARACTER]
+
+        # find characters that were assigned to start as well as any ungated characters that were assigned in choose_single_possible_reward_types() above
+        characters_available = [reward.id for reward in name_event["Start"].rewards] + readily_available_characters
 
         # find all the rewards that can be a character
         character_slots = []
@@ -115,7 +119,8 @@ class Events():
             unlocked_slot_iterations = []
             for slot in character_slots:
                 slot_empty = slot.id is None
-                gate_char_available = (slot.event.character_gate() in characters_available or slot.event.character_gate() is None)
+                gate_char = slot.check.gate_character if slot.check else None
+                gate_char_available = (gate_char in characters_available or gate_char is None)
                 enough_chars_available = len(characters_available) >= slot.event.characters_required()
                 if slot_empty and gate_char_available and enough_chars_available:
                     if slot in slot_iterations:
@@ -125,14 +130,26 @@ class Events():
                     unlocked_slots.append(slot)
                     unlocked_slot_iterations.append(slot_iterations[slot])
 
+            # this means an impossible start has occured.
+            # i.e. no character can be retrieved given the starting char + check availability
+            assert len(unlocked_slots) > 0
+
             # pick slot for the next character weighted by number of iterations each slot has been available
             slot_index = weighted_reward_choice(unlocked_slot_iterations, iteration)
             slot = unlocked_slots[slot_index]
             slot.id = self.characters.get_random_available()
             slot.type = RewardType.CHARACTER
             characters_available.append(slot.id)
-            self.characters.set_character_path(slot.id, slot.event.character_gate())
+            self.characters.set_character_path(slot.id, slot.check.gate_character)
             iteration += 1
+
+        # if self.args.debug:
+        #     for event in events:
+        #         for reward in event.rewards:
+        #             if reward.type == RewardType.CHARACTER:
+        #                 self.pathing = self.pathing + "\n" + event.name() + ": " + self.characters.get_name(reward.id) + "/ " + self.characters.get_default_name(reward.id)
+        #                 self.pathingdict[self.characters.get_default_name(reward.id)] = event.name()
+        #         self.print_pathing_tree()
 
         # get all reward slots still available
         reward_slots = [reward for event in events for reward in event.rewards if reward.id is None]
@@ -165,10 +182,3 @@ class Events():
 
         # choose the rest of the rewards, items given to events after all characters/events assigned
         self.choose_item_possible_rewards(reward_slots)
-
-    def validate(self, events):
-        char_esper_checks = []
-        for event in events:
-            char_esper_checks += [r for r in event.rewards if r.possible_types == (RewardType.CHARACTER | RewardType.ESPER)]
-
-        assert len(char_esper_checks) == CHARACTER_ESPER_ONLY_REWARDS, "Number of char/esper only checks changed - Check usages of CHARACTER_ESPER_ONLY_REWARDS and ensure no breaking changes"

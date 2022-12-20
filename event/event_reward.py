@@ -13,9 +13,25 @@ class Reward:
         self.type = None
         self.event = event
         self.possible_types = possible_types
+        self.check = None
 
     def single_possible_type(self):
         return self.possible_types in RewardType
+
+    def is_type(self, type):
+        return self.type == type
+
+    def is_none(self):
+        return self.is_type(RewardType.NONE)
+
+    def is_character(self):
+        return self.is_type(RewardType.CHARACTER)
+
+    def is_esper(self):
+        return self.is_type(RewardType.ESPER)
+
+    def is_item(self):
+        return self.is_type(RewardType.ITEM)
 
     def __str__(self):
         result = f"{self.id} {self.type} {self.event.name()}"
@@ -30,7 +46,7 @@ class Reward:
 
         return result + " (" + ', '.join(possible_strings) + ")"
 
-def choose_reward(possible_types, characters, espers, items):
+def choose_reward(possible_types, characters, espers, items, exclude_character = None):
     import random
 
     all_types = [flag for flag in RewardType]
@@ -40,7 +56,7 @@ def choose_reward(possible_types, characters, espers, items):
     for reward_type in all_types:
         if reward_type & possible_types:
             if reward_type == RewardType.CHARACTER and characters.get_available_count():
-                return (characters.get_random_available(), reward_type)
+                return (characters.get_random_available(exclude = exclude_character ), reward_type)
             elif reward_type == RewardType.ESPER and espers.available():
                 return (espers.get_random_esper(), reward_type)
             elif reward_type == RewardType.ITEM:

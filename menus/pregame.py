@@ -180,7 +180,6 @@ class PreGameMenu:
             "EXIT_SCROLL_AREA",
         ]
         src.extend(self.common.get_scroll_area_exit_src(self.MENU_NUMBER, self.invoke_flags))
-        
         # Called by C3 JSR jump table
         space = Write(Bank.C3, src, "pregame sustain")
         self.sustain = space.start_address
