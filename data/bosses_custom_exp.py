@@ -63,13 +63,30 @@ custom_exp = {
     name_enemy["Doom"]                  : 230,
     name_enemy["Goddess"]               : 230,
     name_enemy["Poltrgeist"]            : 230,
+}
 
-    name_enemy["Ice Dragon"]            : 200,
-    name_enemy["Storm Drgn"]            : 200,
-    name_enemy["Dirt Drgn"]             : 200,
-    name_enemy["Gold Drgn"]             : 200,
-    name_enemy["Skull Drgn"]            : 200,
-    name_enemy["Blue Drgn"]             : 200,
-    name_enemy["Red Dragon"]            : 200,
-    name_enemy["White Drgn"]            : 200,
+dragons = [
+    name_enemy["Ice Dragon"],
+    name_enemy["Storm Drgn"],
+    name_enemy["Dirt Drgn"],
+    name_enemy["Gold Drgn"],
+    name_enemy["Skull Drgn"],
+    name_enemy["Blue Drgn"],
+    name_enemy["Red Dragon"],
+    name_enemy["White Drgn"],
+]
+
+class DragonExp:
+    HIGH = "high"
+    MEDIUM = "med"
+    LOW = "low"
+    NONE = "none"
+
+    ALL = [HIGH, MEDIUM, LOW, NONE]
+
+dragon_exp = {
+  DragonExp.HIGH    :  {key: 200 for (idx, key) in enumerate(dragons)},
+  DragonExp.MEDIUM  : {key: 155 for (idx, key) in enumerate(dragons)},
+  DragonExp.LOW     : {key: 125 for (idx, key) in enumerate(dragons)},
+  DragonExp.NONE    : {key: 0 for (idx, key) in enumerate(dragons)},
 }

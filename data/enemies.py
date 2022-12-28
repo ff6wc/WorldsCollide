@@ -145,9 +145,12 @@ class Enemies():
                 enemy.hp *= 2
 
     def boss_experience(self):
-        from data.bosses_custom_exp import custom_exp
+        from data.bosses_custom_exp import custom_exp, dragon_exp, dragons
         for enemy_id, exp in custom_exp.items():
             self.enemies[enemy_id].exp = exp * self.enemies[enemy_id].level
+        for dragon_id in dragons:
+            self.enemies[dragon_id].exp = dragon_exp[self.args.dragon_exp][dragon_id]
+            
 
     def boss_normalize_distort_stats(self):
         import random

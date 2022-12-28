@@ -5,6 +5,16 @@ from event.event_reward import RewardType
 def name():
     return "Check Rewards"
 
+char_esper_item_reward = "cei"
+esper_item_reward = "ei"
+item_reward = "i"
+
+allowed_values = [
+    char_esper_item_reward,
+    esper_item_reward,
+    item_reward,
+]
+
 def parse(parser):
     from constants.check_presets import preset_keys
     advanced_checks = parser.add_argument_group("Check Rewards")
@@ -30,9 +40,9 @@ def parse(parser):
     advanced_checks.add_argument("-fcrr", "--force-character-rewards", type = str,
                 help = "Forces list of checks to give an CHARACTER reward")
 
-    advanced_checks.add_argument("-dchar", "--dragons-as-characters", default = [0, 0], type = int,
-                nargs = 2, metavar = ("MIN", "MAX"), choices = range(6),
-                help = "Up to 5 dragons are guranteed to reward characters. The dragon will have the recruited character's sprite. Kefka's Tower and Phoenix Cave dragons cannot be characters.")
+    advanced_checks.add_argument("-drewards", "--dragon-rewards", default = item_reward, type = str,
+                choices = [char_esper_item_reward, esper_item_reward, item_reward],
+                help = "Specifies the rewards of dragons. Only applies to dragons outside of Kefka's Tower")
 
 character_title = "Character Checks"
 esper_item_title = "Esper+Item Checks"
@@ -45,7 +55,13 @@ def process(args):
     args.esper_item_rewards = []
     args.esper_rewards = []
     args.item_rewards = []
-    args._process_min_max("dragons_as_characters")
+    
+    if args.dragon_rewards == char_esper_item_reward:
+        args.dragon_reward = RewardType.CHARACTER | RewardType.ESPER | RewardType.ITEM
+    elif args.dragon_rewards == esper_item_reward:
+        args.dragon_reward = RewardType.ESPER | RewardType.ITEM
+    else:
+        args.dragon_reward = RewardType.ITEM
 
     if args.no_free_characters_espers:
         args.check_preset = NO_FREE_CHARACTERS_ESPERS.key
@@ -93,8 +109,8 @@ def flags(args):
     if args.force_item_rewards:
         flags += f" -firr {args.force_item_rewards}"
 
-    if args.dragons_as_characters_min != 0 or args.dragons_as_characters_max != 0:
-        flags += f" -dchar {args.dragons_as_characters_min} {args.dragons_as_characters_max}"
+    if args.dragon_rewards:
+        flags += f" -drewards {args.dragon_rewards}"
 
     return flags
 
@@ -109,8 +125,12 @@ def options(args):
     if args.item_rewards:
         opts[item_title] = args.item_rewards
 
-    if args.dragons_as_characters:
-        opts['Dragon Characters'] = f"{args.dragons_as_characters_min}-{args.dragons_as_characters_max}"
+    if args.dragon_rewards == char_esper_item_reward:
+        opts['Dragon Rewards'] = "Char/Espr/Item"
+    elif args.dragon_rewards == esper_item_reward:
+        opts['Dragon Rewards'] = "Esper/Item"
+    else:
+        opts['Dragon Rewards'] = "Item"
 
     return [(key, value) for (key, value) in opts.items()]
 

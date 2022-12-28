@@ -68,12 +68,12 @@ check_bit = [
     checks.ZOZO_TOWER,
 ]
 
-check_bit += [                                                          # Index
-    NameBit("Kefka's Tower Ambush", event_bit.DEFEATED_INFERNO),        # 59
-    NameBit("Kefka's Tower Guardian", event_bit.DEFEATED_GUARDIAN),     # 60
-    NameBit("KT Left Triad Statue", event_bit.DEFEATED_DOOM),           # 61
-    NameBit("KT Mid Triad Statue", event_bit.DEFEATED_POLTERGEIST),     # 62
-    NameBit("KT Right Triad Statue", event_bit.DEFEATED_GODDESS),       # 63
+check_bit += [                              # Check index for objectives
+    checks.KEFKAS_TOWER_AMBUSH,             # 59
+    checks.KEFKAS_TOWER_GUARDIAN,           # 60
+    checks.KEFKAS_TOWER_LEFT_STATUE,        # 61
+    checks.KEFKAS_TOWER_MIDDLE_STATUE,      # 62
+    checks.KEFKAS_TOWER_RIGHT_STATUE,       # 63
 ]
 
 quest_bit = [

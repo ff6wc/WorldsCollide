@@ -21,14 +21,8 @@ class EightDragons(Event):
     def init_rewards(self):
         self.dragon_rewards = []
 
-        import random
-        dragon_character_count = random.randint(self.args.dragons_as_characters_min, self.args.dragons_as_characters_max)
-        character_rewards = [x.bit for x in random.sample(RECRUITABLE_DRAGONS, dragon_character_count)]
-
         for dragon in dragon_data:
-            reward = dragon.check.reward_types
-            bit = dragon.check.bit
-            self.dragon_rewards.append(self.add_reward(dragon.check, RewardType.CHARACTER if bit in character_rewards else reward))
+            self.dragon_rewards.append(self.add_reward(dragon.check, self.args.dragon_reward))
 
     def init_event_bits(self, space):
         space.write(

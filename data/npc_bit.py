@@ -147,6 +147,9 @@ DOOM_STATUE_KEFKA_TOWER = 0x6b0
 GODDESS_STATUE_KEFKA_TOWER = 0x6b1
 POLTRGEIST_STATUE_KEFKA_TOWER = 0x6b2
 
+# bits [571-5f5] are unused
+FANATICS_TOWER_SECONDARY_REWARD = 0x571 # custom, used for secondary reward at top of fanatics tower (if esper only)
+
 def byte(npc_bit):
     return npc_bit // 8
 

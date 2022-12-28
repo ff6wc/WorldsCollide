@@ -248,7 +248,8 @@ class KefkaTower(Event):
             field.InvokeBattle(boss_pack_id),
         )
 
-    # Copy no less than 4 bytes between start_target and end_target
+    # Copy at least 4 bytes triggering an encounter and extends it to 
+    #   complete the check and check objectives once the encounter finishes. 
     # This will be called after one of the kt encounters has completed, but just prior to finishing the check
     def kt_encounter_objective_mod(self, boss_name, bit, start_target, end_target, description):
         src = Read(start_target, end_target)
