@@ -17,8 +17,8 @@ log_msg += f"Generated {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
 log_msg += f"Input     {os.path.basename(args.input_file)}\n"
 log_msg += f"Output    {os.path.basename(args.output_file)}\n"
 log_msg += f"Log       {os.path.basename(log_file)}\n"
-if args.website_link:
-    log_msg += f"Website   {args.website_link}\n"
+if args.website_url:
+    log_msg += f"Website   {args.website_url}\n"
 log_msg += f"Seed      {args.seed}\n"
 if not args.hide_flags:
     log_msg += f"Flags     {args.flags}\n"
