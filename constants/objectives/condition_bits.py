@@ -90,8 +90,10 @@ quest_bit = [
     NameBit("Win A Coliseum Match", event_bit.WON_A_COLISEUM_MATCH),
 ]
 
+from constants.objectives.boss_ids import boss_objective_ids
+
 boss_bit = []
-for formation_id in sorted(normal_formation_name, key = normal_formation_name.get):
+for formation_id in boss_objective_ids:
     boss_bit.append(NameBit(normal_formation_name[formation_id], battle_bit.boss_defeated(formation_id)))
 
 dragon_bit = []
