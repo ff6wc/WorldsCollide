@@ -90,8 +90,13 @@ def flags(args):
     return flags
 
 def options(args):
+    ultima = "Original"
+    if args.no_ultima:
+        ultima = "N/A"
+    elif args.ultima_254_mp:
+        ultima = "254 MP"
 
-    opts = [
+    return [
         ("No Moogle Charms", args.no_moogle_charms),
         ("No Exp Eggs", args.no_exp_eggs),
         ("No Illuminas", args.no_illuminas),
@@ -99,13 +104,9 @@ def options(args):
         ("No Free Paladin Shields", args.no_free_paladin_shields),
         ("No Free Characters/Espers", args.no_free_characters_espers),
         ("Permadeath", args.permadeath),
+        ("Ultima", ultima)
         ("Remove Learnable Spells", args.remove_learnable_spell_ids),
     ]
-
-    if args.ultima_254:
-        opts += [
-            ("Ultima", "254 MP")
-        ]
         
     return opts
 def _format_spells_log_entries(spell_ids):
