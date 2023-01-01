@@ -5,6 +5,8 @@ blacklisted_args = [
     'help',
     'input_file',
     'output_file',
+    'manifest_file',
+    'seed_id',
     'debug',
     'no_rom_output',
     'stdout_log'

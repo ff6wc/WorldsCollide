@@ -21,7 +21,9 @@ class Arguments:
         self.parser.add_argument("-i", dest = "input_file", required = True, help = "FFIII US v1.0 rom file")
         self.parser.add_argument("-o", dest = "output_file", required = False, help = "Modified FFIII US v1.0 rom file")
         self.parser.add_argument("-url", dest = "website_url", required = False, help = "Url to the shareable link for the seed")
+        self.parser.add_argument("-manifest", dest = "manifest_file", required = False, help = "Output location for api metadata")
         self.parser.add_argument("-debug", dest = "debug", action = "store_true", help = "Debug mode")
+        self.parser.add_argument("-sid", dest = "seed_id", action = "store_true", help = "Key used for api tracking")
 
         self.parser.add_argument("-nro", dest = "no_rom_output", action = "store_true", help = "Do not output a modified rom file")
         self.parser.add_argument("-slog", dest = "stdout_log", action = "store_true", help = "Write log to stdout instead of file")
