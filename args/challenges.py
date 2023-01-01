@@ -104,7 +104,7 @@ def options(args):
         ("No Free Paladin Shields", args.no_free_paladin_shields),
         ("No Free Characters/Espers", args.no_free_characters_espers),
         ("Permadeath", args.permadeath),
-        ("Ultima", ultima)
+        ("Ultima", ultima),
         ("Remove Learnable Spells", args.remove_learnable_spell_ids),
     ]
         
