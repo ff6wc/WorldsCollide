@@ -165,6 +165,7 @@ id_sprite = {
     206 : "Palom_Magus-HoxNorf-FF4",
     207 : "Patchouli-HoxNorf-Touhou",
     208 : "Suwako-HoxNorf-Touhou",
+    209 : "Eiko_Miko-ScarabEnigma-FF9",
     
     # FFT
     300 : "Alma-HoxNorf-FFT",
