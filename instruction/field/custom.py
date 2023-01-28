@@ -25,6 +25,39 @@ def _add_esper_increment():
     space.write(asm.JMP(increment_found, asm.ABS))
 _add_esper_increment()
 
+class RemoveDeath(_Instruction):
+    def __init__(self, character):
+        import instruction.field as field
+
+        self.current_status = 0x1614 # character status effects address
+        self.death_mask = field.Status.DEATH >> 8
+        # add a special command specifically for removing death. 
+        # This is used in special events (like Moogle Defense), where we want to revive even with permadeath
+        # Code based on C0/AE2D - AE44 (gen. act. 88 to Remove status effects)
+        src = [
+            asm.JSR(0x9dad, asm.ABS),
+            asm.CPY(0x0250, asm.IMM16),
+            asm.BCS("DONE"),
+            asm.A16(),
+            asm.LDA(self.current_status, asm.ABS_Y),
+            asm.AND(~self.death_mask, asm.IMM16), # clear the DEATH bit
+            asm.STA(self.current_status, asm.ABS_Y),
+            asm.TDC(),
+            asm.A8(),
+            "DONE",
+            asm.LDA(0x02, asm.IMM8),        # command size
+            asm.JMP(0x9b5c, asm.ABS),       # next command
+        ]
+        space = Write(Bank.C0, src, "custom remove_death command")
+        address = space.start_address
+
+        opcode = 0x6f
+        _set_opcode_address(opcode, address)
+
+        RemoveDeath.__init__ = lambda self, character : super().__init__(opcode, character)
+        self.__init__(character)
+
+
 class ToggleWorlds(_Instruction):
     def __init__(self):
         fade_load_map = 0xab47
@@ -67,6 +100,58 @@ class LoadEsperFound(_Instruction):
 
         LoadEsperFound.__init__ = lambda self, esper : super().__init__(opcode, esper)
         self.__init__(esper)
+
+class LoadPartiesWithCharacters(_Instruction):
+    ''' Sets bits 0-2 in event word when those parties have characters.'''
+    def __init__(self):
+        import data.event_bit as event_bit
+        result_byte = event_bit.address(event_bit.multipurpose(0))
+        src = [
+            asm.STZ(result_byte, asm.ABS),
+            asm.LDX(0x0000, asm.IMM16),
+            "START_CHARACTER_LOOP",
+            asm.LDA(0x1850, asm.ABS_X), # load the character data 
+            asm.AND(0x47, asm.IMM8),    # isolate the enabled bit and party bits (note: there are 3 party bits, but we only use 2.)
+            "CHECK_PARTY_1",
+            asm.CMP(0x41, asm.IMM8),
+            asm.BNE("CHECK_PARTY_2"),
+            # character enabled and in party 1
+            asm.LDA(result_byte, asm.ABS),
+            asm.ORA(0x01, asm.IMM8), # set bit 0 in the result to indicate party 1 has an enabled character
+            asm.STA(result_byte, asm.ABS),
+            asm.BRA("NEXT_CHARACTER"),
+            "CHECK_PARTY_2",
+            asm.CMP(0x42, asm.IMM8),
+            asm.BNE("CHECK_PARTY_3"),
+            # character enabled and in party 2
+            asm.LDA(result_byte, asm.ABS),
+            asm.ORA(0x02, asm.IMM8), # set bit 1 in the result to indicate party 2 has an enabled character 
+            asm.STA(result_byte, asm.ABS),
+            asm.BRA("NEXT_CHARACTER"),
+            "CHECK_PARTY_3",
+            asm.CMP(0x43, asm.IMM8),
+            asm.BNE("NEXT_CHARACTER"),
+            # character enabled and in party 3
+            asm.LDA(result_byte, asm.ABS),
+            asm.ORA(0x04, asm.IMM8), # set bit 2 in the result to indicate party 3 has an enabled character
+            asm.STA(result_byte, asm.ABS),
+            # end of loop iteration -- increment X for another go
+            "NEXT_CHARACTER",
+            asm.INX(),
+            asm.CPX(0x000f, asm.IMM16), # did we check all 16 characters?
+            asm.BNE("START_CHARACTER_LOOP"), # if not, check the next one
+            asm.LDA(0x01, asm.IMM8),        # command size
+            asm.JMP(0x9b5c, asm.ABS),       # next command
+        ]
+
+        space = Write(Bank.C0, src, "custom load parties with characters instruction")
+        address = space.start_address
+
+        opcode = 0xe5
+        _set_opcode_address(opcode, address)
+
+        LoadPartiesWithCharacters.__init__ = lambda self : super().__init__(opcode)
+        self.__init__()
 
 class RecruitCharacter(_Instruction):
     def __init__(self, character):
