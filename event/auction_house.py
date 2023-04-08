@@ -118,9 +118,9 @@ class AuctionHouse(Event):
 
     def get_reward_announce_dialog(self, name, start_price, item):
         if item:
-            reward_dialog = '“' + name + '“!'
+            reward_dialog = '“' + name + '”!' #https://discord.com/channels/666661907628949504/666811452350398493/1085018091844554832
         else:
-            reward_dialog = 'The Magicite, “' + name + '“!'
+            reward_dialog = 'The Magicite, “' + name + '”!'
 
         # keep auctioneer dialog somewhat centered with new esper/item names
         # looks like about 32 characters on a line (32 is just an estimate, it is not monospace)
