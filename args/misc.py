@@ -28,10 +28,6 @@ def parse(parser):
     misc.add_argument("-as", "--auto-sprint", action = "store_true",
                       help = "DEPRECATED - Use `-move as` instead. Player always sprints. Sprint Shoes have no effect")
 
-    ### new option for NPC tips
-    misc.add_argument("-npctips", "--npc-dialog-tips", action = "store_true",
-                      help = "NPC provide general game tips")
-
     event_timers = misc.add_mutually_exclusive_group()
     event_timers.add_argument("-etr", "--event-timers-random", action = "store_true",
                               help = "Collapsing House, Opera House, and Floating Continent timers randomized")
