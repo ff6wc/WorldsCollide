@@ -121,6 +121,13 @@ def _format_spells_log_entries(spell_ids):
         spell_entries.append(("", id_spell[spell_id]))
     return spell_entries
 
+def _format_spells_log_entries(spell_ids):
+    from constants.spells import id_spell
+    spell_entries = []
+    for spell_id in spell_ids:
+        spell_entries.append(("", id_spell[spell_id]))
+    return spell_entries
+
 def menu(args):
     from menus.flags_remove_learnable_spells import FlagsRemoveLearnableSpells
 
