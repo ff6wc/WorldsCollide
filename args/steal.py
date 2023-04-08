@@ -43,9 +43,9 @@ def options(args):
 
     result.append(("Chances", steal_chances))
 
-    result.append(("Shuffle steals & drops", args.shuffle_steals_drops))
+    result.append(("Shuffle", args.shuffle_steals_drops))
     if args.shuffle_steals_drops:
-        result.append(("Random Percent:", f"{args.shuffle_steals_drops_random_percent}%"))
+        result.append(("Random Percent", f"{args.shuffle_steals_drops_random_percent}%"))
 
     return result
 
