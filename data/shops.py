@@ -1,3 +1,5 @@
+from constants.items import TRASH_IDS
+from data.item import Item
 from data.shop import Shop
 from data.structures import DataArray
 
@@ -226,6 +228,8 @@ class Shops():
             exclude.append(self.items.get_id("Exp. Egg"))
         if self.args.shops_no_illuminas:
             exclude.append(self.items.get_id("Illumina"))
+        if self.args.no_trash_shops:
+            exclude.extend(TRASH_IDS)
 
         for shop in self.shops:
             for item in exclude:

@@ -295,3 +295,25 @@ good_items = [
     "Marvel Shoes",
     "Exp. Egg",
 ]
+
+## TRASH LIST https://docs.google.com/spreadsheets/d/1Cit5Xl_TCBPFI4q1NEVQhSYGH1wKY9st_1yee3lzCP8/edit#gid=0
+
+TRASH_WEAPONS = [
+    "Dirk", "MithrilKnife", "Guardian", "MithrilBlade", "RegalCutlass", "Crystal", "Mithril Pike",
+    "Stout Spear",  "Imperial", "Kodachi", "Hardened", "Ashura", "Kotetsu", "Forged",
+    "Aura", "Strato", "Punisher", "MetalKnuckle", "Mithril Claw", "Kaiser",
+    "Flail", "Morning Star", "Full Moon", "Boomerang", "Rising Sun", "Cards", "Darts", "Chocobo Brsh",
+    ]
+
+TRASH_ARMOR = ["Buckler", "Mithril Shld", "Heavy Shld", "Gold Shld", "Leather Hat", "Plumed Hat", "Bandana",
+               "Iron Helmet", "Mithril Helm", "Gold Helmet", "LeatherArmor", "Kung Fu Suit", "Mithril Vest",
+               "Diamond Vest", "Cotton Robe", "Silk Robe", "Iron Armor",
+               "DiamondArmor", "Crystal Mail", "Gold Armor",
+               "Mithril Mail"
+]
+TRASH_RElICS = ["Charm Bangle", "Coin Toss", "FakeMustache"]
+
+
+TRASH_ITEMS = TRASH_WEAPONS + TRASH_ARMOR + TRASH_RElICS
+
+TRASH_IDS = [name_id.get(value) for value in TRASH_ITEMS]

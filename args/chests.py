@@ -18,6 +18,12 @@ def parse(parser):
     chests.add_argument("-cms", "--chest-monsters-shuffle", action = "store_true",
                         help = "Monsters-in-a-box shuffled but locations unchanged")
 
+    chests.add_argument("-ntc", "--no-trash-chests",  action = "store_true",
+                       help="Replace Low Tier Items with gold in chests")
+
+
+
+
 def process(args):
     if args.chest_contents_shuffle_random is not None:
         args.chest_contents_shuffle_random_percent = args.chest_contents_shuffle_random
@@ -37,6 +43,8 @@ def flags(args):
 
     if args.chest_monsters_shuffle:
         flags += " -cms"
+    if args.no_trash_chests:
+        flags += " -ntc"
 
     return flags
 
@@ -57,6 +65,10 @@ def options(args):
     if args.chest_contents_shuffle_random:
         result.append(("Random Percent", f"{args.chest_contents_shuffle_random_percent}%"))
     result.append(("Monsters-In-A-Box Shuffled", args.chest_monsters_shuffle))
+
+    if args.no_trash_chests:
+        result.append(("No Trash Chests", args.no_trash_chests))
+
 
     return result
 
