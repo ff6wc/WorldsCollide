@@ -53,6 +53,9 @@ def parse(parser):
     shops.add_argument("-snil", "--shops-no-illuminas", action = "store_true",
                        help = "Illuminas not sold in shops")
 
+    shops.add_argument("-nts", "--no-trash-shops",  action = "store_true",
+                       help="Omit Low tier items in shops")
+
 def process(args):
     if args.shop_inventory_shuffle_random is not None:
         args.shop_inventory_shuffle_random_percent = args.shop_inventory_shuffle_random
@@ -105,6 +108,9 @@ def flags(args):
         flags += " -snee"
     if args.shops_no_illuminas:
         flags += " -snil"
+
+    if args.no_trash_shops:
+        flags += " -nts"
 
     return flags
 
@@ -159,6 +165,7 @@ def options(args):
         ("Expensive Balls", args.shops_expensive_super_balls),
         ("No Exp. Eggs", args.shops_no_exp_eggs),
         ("No Illuminas", args.shops_no_illuminas),
+        ("No Trash Shops", args.no_trash_shops)
     ])
     return result
 
