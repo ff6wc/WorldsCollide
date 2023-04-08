@@ -59,6 +59,27 @@ class Start(Event):
             field.SetBattleEventBit(battle_bit.MAGIC_POINTS_AFTER_BATTLE),
         )
 
+    def no_random_encounters_mod(self):
+        # Set all encounter rates to zero
+        # (normal.  no Charm Bangle or Moogle Charm)
+        # C0/C29F:	C000   ("less encounter" frequency ==> looks like "normal encounter")
+        # C0/C2A1:	6000   ("norm encounter" frequency ==> looks like "less encounter")
+        # C0/C2A3:	8001   ("more encounter" frequency ==> looks right)
+        # C0/C2A5:	0000   ("no encounter" frequency ==> looks right)
+        #
+        # (Charm Bangle, halves of above numbers)
+        # C0/C2A7:	6000   ("less encounter" frequency ==> looks like "normal encounter")
+        # C0/C2A9:	3000   ("norm encounter" frequency ==> looks like "less encounter")
+        # C0/C2AB:	C000   ("more encounter" frequency ==> looks right)
+        # C0/C2AD:	0000   ("no encounter" frequency ==> looks right)
+        self.rom.set_bytes(0x0c29f, [0x00 for i in range(64)])  # Set all encounter rates to zero
+        rate = 0x10  # 1/3 charm bangle
+        self.rom.set_bytes(0x0c2af, [rate, 0x00, rate, 0x00, rate, 0x00])  # Set World Map -  Moogle Charm encounter rates to non-zero
+
+        # Rename moogle charm to moogle curse: in data.items
+
+
+
     def mod(self):
         self.intro_loop_mod()
         self.init_characters_mod()
@@ -67,6 +88,9 @@ class Start(Event):
         self.start_gold_mod()
         self.start_items_mod()
         self.start_game_mod()
+
+        if self.args.no_random_encounters:
+            self.no_random_encounters_mod()
 
         # where the game begins after intro/pregame
         space = Reserve(0xc9a4f, 0xc9ad4, "setup and start game", field.NOP())

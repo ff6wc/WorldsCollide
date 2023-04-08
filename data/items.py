@@ -1,10 +1,12 @@
 import args, random
 from data.item import Item
+from data.structures import DataList
 
 from constants.items import good_items
 from constants.items import id_name, name_id
 
 import data.items_asm as items_asm
+import data.text as text
 
 class Items():
     ITEM_COUNT = 256
@@ -12,6 +14,12 @@ class Items():
 
     BREAKABLE_RODS = range(53, 59)
     ELEMENTAL_SHIELDS = range(96, 99)
+
+    DESC_PTRS_START = 0x2d7aa0
+    DESC_PTRS_END = 0x2d7c9f
+
+    DESC_START = 0x2d6400
+    DESC_END = 0x2d779f
 
     GOOD = [name_id[name] for name in good_items]
     if args.stronger_atma_weapon:
@@ -29,6 +37,10 @@ class Items():
         self.dialogs = dialogs
         self.characters = characters
 
+        self.desc_data = DataList(self.rom, self.DESC_PTRS_START, self.DESC_PTRS_END,
+                                  self.rom.SHORT_PTR_SIZE, self.DESC_START,
+                                  self.DESC_START, self.DESC_END)
+
         self.read()
 
     def read(self):
@@ -37,7 +49,7 @@ class Items():
                            Item.SHIELD : [], Item.HELMET : [], Item.RELIC : [], Item.ITEM : []}
 
         for item_index in range(self.ITEM_COUNT):
-            item = Item(item_index, self.rom)
+            item = Item(item_index, self.rom, self.desc_data[item_index])
 
             self.items.append(item)
 
@@ -187,6 +199,13 @@ class Items():
             self.characters.characters[index].init_body = random.choice(tiers[Item.ARMOR][1])
             self.characters.characters[index].init_head = random.choice(tiers[Item.HELMET][1])
 
+    def moogle_curse(self):
+        # If using -no-random-encounters, the Moogle Charm becomes the Moogle Curse
+        # (enables random encounters on world map).  Update the name and description.
+        moogle_charm = self.items[name_id["Moogle Charm"]]
+        moogle_charm.name = "Moogle Curse"
+        moogle_charm.desc = "Draw monsters on world map<end>"
+
     def mod(self):
         not_relic_condition = lambda x : x != Item.RELIC
         if self.args.item_equipable_random:
@@ -261,9 +280,14 @@ class Items():
 
         self.moogle_starting_equipment()
 
+        if self.args.no_random_encounters:
+            self.moogle_curse()
+
     def write(self):
         for item in self.items:
             item.write()
+            self.desc_data[item.id] = item.get_desc_data()
+        self.desc_data.write()
 
     def get_id(self, name):
         return name_id[name]

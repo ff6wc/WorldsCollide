@@ -24,6 +24,8 @@ def parse(parser):
                             help = "Life spells cannot be learned. Fenix Downs unavailable (except from starting items). Buckets/inns/tents/events do not revive characters. Phoenix casts Life 3 on party instead of Life")
     challenges.add_argument("-rls", "--remove-learnable-spells", type = str,
                             help = "Remove spells from learnable sources: Items, Espers, Natural Magic, and Objectives")
+    challenges.add_argument("-nre", "--no-random-encounters", action = "store_true",
+                            help="Turn off random encounters")
 
 def process(args):
     from constants.spells import black_magic_ids, white_magic_ids, gray_magic_ids, spell_id
@@ -86,6 +88,8 @@ def flags(args):
         flags += " -pd"
     if args.remove_learnable_spells:
         flags += f" -rls {args.remove_learnable_spells}"
+    if args.no_random_encounters:
+        flags += " -nre"
 
     return flags
 
@@ -106,6 +110,7 @@ def options(args):
         ("Permadeath", args.permadeath),
         ("Ultima", ultima),
         ("Remove Learnable Spells", args.remove_learnable_spell_ids),
+        ("No Random Encounters", args.no_random_encounters),
     ]
         
     return opts
