@@ -208,7 +208,10 @@ class Chests():
             MIAB_boss.remove(name_event_battle_group["Phunbaba 3"])
 
         randomizable_types = [Chest.EMPTY, Chest.ITEM, Chest.GOLD]
-        possible_chests = [chest for chest in self.chests if ((chest.type in randomizable_types))]
+        # Remove chests in the Zone Eater crushing ceiling room from the pool.
+        ze_crush_room_chests = [chest for chest in self.map_chests[0x118] if chest.x != 1]
+        possible_chests = [chest for chest in self.chests if ((chest.type in randomizable_types)) and
+                           chest not in ze_crush_room_chests]
         num_monster_chests = int(len(possible_chests) * ((enemy_percent) / 100.0))
         #gets the specific chests that will be randomized
         random_chests = random.sample(possible_chests, num_monster_chests)  
