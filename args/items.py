@@ -137,18 +137,18 @@ def options(args):
     cursed_shield_battles = f"{args.cursed_shield_battles_min}-{args.cursed_shield_battles_max}"
 
     return [
-        ("Equipable", equipable),
-        ("Equipable Relics", equipable_relics),
-        ("Cursed Shield Battles", cursed_shield_battles),
-        ("Moogle Charm All", args.moogle_charm_all),
-        ("SwdTech Runic All", args.swdtech_runic_all),
-        ("Stronger Atma Weapon", args.stronger_atma_weapon),
+        ("Equipable", equipable, "items_equipable"),
+        ("Equipable Relics", equipable_relics, "relics_equipable"),
+        ("Cursed Shield Battles", cursed_shield_battles, "cursed_shield_battles"),
+        ("Moogle Charm All", args.moogle_charm_all, "moogle_charm_all"),
+        ("SwdTech Runic All", args.swdtech_runic_all, "swdtech_runic_all"),
+        ("Stronger Atma Weapon", args.stronger_atma_weapon, "stronger_atma_weapon"),
     ]
 
 def menu(args):
     entries = options(args)
     for index, entry in enumerate(entries):
-        key, value = entry
+        key, value, unique_name = entry
         try:
             if key == "Equipable":
                 key = "Equip"
@@ -159,7 +159,7 @@ def menu(args):
             value = value.replace("Balanced Random", "Balanced")
             value = value.replace("Original + Random", "Original + ")
             value = value.replace("Shuffle + Random", "Shuffle + ")
-            entries[index] = (key, value)
+            entries[index] = (key, value, unique_name)
         except:
             pass
     return (name(), entries)

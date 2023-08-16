@@ -153,15 +153,15 @@ def options(args):
         movement = key_name[AUTO_SPRINT]
 
     return [
-        ("Movement", movement),
-        ("Original Name Display", args.original_name_display),
-        ("Random RNG", args.random_rng),
-        ("Random Clock", args.random_clock),
-        ("Scan All", args.scan_all),
-        ("Warp All", args.warp_all),
-        ("Event Timers", event_timers),
-        ("Y NPC", y_npc),
-        ("NPC Tips", args.npc_dialog_tips),
+        ("Movement", movement, "movement"),
+        ("Original Name Display", args.original_name_display, "original_name_display"),
+        ("Random RNG", args.random_rng, "random_rng"),
+        ("Random Clock", args.random_clock, "random_clock"),
+        ("Scan All", args.scan_all, "scan_all"),
+        ("Warp All", args.warp_all, "warp_all"),
+        ("Event Timers", event_timers, "event_timers"),
+        ("Y NPC", y_npc, "y_npc"),
+        ("NPC Tips", args.npc_dialog_tips, "npc_dialog_tips"),
     ]
 
 def menu(args):
