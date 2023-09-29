@@ -11,7 +11,7 @@ def parse(parser):
     misc.add_argument("-rr", "--random-rng", action = "store_true",
                       help = "Randomize in-game RNG table. Affects Setzer's Slots, Auction House, Ebot's Rock, ...")
     misc.add_argument("-rc", "--random-clock", action = "store_true",
-                      help = "Randomize clock's correct time and NPC clues in Zozo")
+                      help = "(DEPRECATED) Randomize clock's correct time and NPC clues in Zozo")
     misc.add_argument("-scan", "--scan-all", action = "store_true",
                       help = "All enemies scannable. All characters start with scan learned. Scan costs 0 MP. Useful for testing/debugging")
     misc.add_argument("-warp", "--warp-all", action = "store_true",
@@ -75,8 +75,6 @@ def flags(args):
         flags += " -ond"
     if args.random_rng:
         flags += " -rr"
-    if args.random_clock:
-        flags += " -rc"
     if args.scan_all:
         flags += " -scan"
     if args.warp_all:
@@ -156,7 +154,6 @@ def options(args):
         ("Movement", movement),
         ("Original Name Display", args.original_name_display),
         ("Random RNG", args.random_rng),
-        ("Random Clock", args.random_clock),
         ("Scan All", args.scan_all),
         ("Warp All", args.warp_all),
         ("Event Timers", event_timers),
