@@ -396,13 +396,6 @@ class EnemyPacks():
         # after modification, generate names
         self._update_names()
 
-        # DEBUG: print out event battle groups that are still different -- this likely indicates that it's unused in WC
-        for i, pack in enumerate(self.packs):
-            if pack.FORMATION_COUNT == 2:
-                if pack.formations[0] != pack.formations[1]:
-                    print(f"{i-256} {hex(i-256)}: {pack.formations[0]} {pack.formations[1]}")
-
-
     def write(self):
         pack_index = 0
         for pack4_index in range(len(self.pack4_data)):
