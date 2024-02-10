@@ -1,6 +1,6 @@
 from data.sketch import Sketch
 from data.structures import DataArray
-from memory.space import Reserve, Bank, Write
+from memory.space import Reserve, Bank, Write, Read
 import instruction.asm as asm
 
 class Sketches():
@@ -52,6 +52,46 @@ class Sketches():
         space.write(
             asm.JSR(use_sketcher_stats_addr, asm.ABS)
         )
+
+        # While the above subroutine loads Mag Pwr and Vigor, particularly for sketched spells, it doesn't handle Hit/Fight/Special BatPwr or weapon specials. 
+        # Therefore, we're going to replace the X in all of the C2/299F subroutine with the sketcher/controller.
+        src = [
+            asm.STX(0x10, asm.DIR),   # store X into scratchpad -- we'll restore it below near the end of the C2/299F routine
+            asm.LDA(0x3417, asm.ABS), # get Sketcher
+            asm.BMI("check_control"), # branch if not sketcher
+            asm.TAX(),                # if there's a valid sketcher, set them as X for all of the C2/299F routine
+            "check_control",
+            asm.LDA(0x32B9,asm.ABS_X),# who's Controlling this entity?
+            asm.CMP(0xFF, asm.IMM8),
+            asm.BEQ("exit"),          # branch if nobody controls them
+            asm.TAX(),                # if there's a valid controller, user their stats
+            "exit",
+            Read(0x229a0, 0x229a2),
+            asm.RTS(),
+        ]
+        space = Write(Bank.C2, src, "Sketch/Control Casters Weapon stats")
+        use_sketcher_controller_weapon_stats_addr = space.start_address
+
+        space = Reserve(0x229a0, 0x229a2, "jump to sketch/control weapon stats")
+        space.write(
+            asm.JSR(use_sketcher_controller_weapon_stats_addr, asm.ABS)
+        )
+
+        # restore X for the remainder of C2/299F. The only impact of doing it this early is that if the enemy is imped, the sketch/controlled attack will be weak.
+        src = [
+            asm.LDX(0x10, asm.DIR), # restore X from scratchpad
+            asm.STZ(0x10, asm.DIR), # zero out scratchpad just in case
+            Read(0x22a1b, 0x22a1d), # displaced code
+            asm.RTS(),
+        ]
+        space = Write(Bank.C2, src, "Sketch/Control Casters Weapon stats end")
+        use_sketcher_controller_weapon_stats_end_addr = space.start_address
+
+        space = Reserve(0x22a1b, 0x22a1d, "jump to sketch/control weapon stats end")
+        space.write(
+            asm.JSR(use_sketcher_controller_weapon_stats_end_addr, asm.ABS),
+        )
+
 
     def enable_sketch_improved_abilities(self):
         from data.spell_names import name_id
