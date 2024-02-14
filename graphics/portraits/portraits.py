@@ -311,6 +311,15 @@ id_portrait = {
     402 : "Lenna (Thief)-JamesWhite89-FF5",
     403 : "Lenna (Summoner)-JamesWhite89-FF5",
     404 : "Lenna (Beastmaster)-JamesWhite89-FF5",
+    405 : "Purple Heart-HoxNorf-Neptunia",
+    406 : "Reimu (PC98)-HoxNorf-Touhou",
+    407 : "Mokou-HoxNorf-Touhou",
+    408 : "Youmu-HoxNorf-Touhou",
+    409 : "Kirby-Unknown-Kirby",
+    410 : "Toadette (Sailor)-HoxNorf-Mario",
+    411 : "Shulk-HoxNorf-Xenoblade",
+    412 : "Miko-HoxNorf-Touhou",
+    413 : "Flowey-pomariin-Undertale",
 }
 
 def get_bin_path(id_):

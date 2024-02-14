@@ -295,6 +295,15 @@ id_palette = {
     357 : "Lenna (Thief)-HoxNorf-FF5",
     358 : "Lenna (Summoner)-HoxNorf-FF5",
     359 : "Lenna (Beastmaster)-HoxNorf-FF5",
+    360 : "Purple Heart-HoxNorf-Neptunia",
+    361 : "Reimu (PC98)-HoxNorf-Touhou",
+    362 : "Mokou-HoxNorf-Touhou",
+    363 : "Youmu-HoxNorf-Touhou",
+    364 : "Kirby-HoxNorf-Kirby",
+    365 : "Toadette (Sailor)-HoxNorf-Mario",
+    366 : "Shulk-HoxNorf-Xenoblade",
+    367 : "Miko-HoxNorf-Touhou",
+    368 : "Flowey-pomariin-Undertale",
 }
 
 def get_path(id_):

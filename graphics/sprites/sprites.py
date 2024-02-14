@@ -310,6 +310,15 @@ id_sprite = {
     355 : "Lenna (Thief)-HoxNorf-FF5",
     356 : "Lenna (Summoner)-HoxNorf-FF5",
     357 : "Lenna (Beastmaster)-HoxNorf-FF5",
+    358 : "Purple Heart-HoxNorf-Neptunia",
+    359 : "Reimu (PC98)-HoxNorf-Touhou",
+    360 : "Mokou-HoxNorf-Touhou",
+    361 : "Youmu-HoxNorf-Touhou",
+    362 : "Kirby-HoxNorf-Kirby",
+    363 : "Toadette (Sailor)-HoxNorf-Mario",
+    364 : "Shulk-HoxNorf-Xenoblade",
+    365 : "Miko-HoxNorf-Touhou",
+    366 : "Flowey-pomariin-Undertale",
 }
 
 def get_path(id_):
