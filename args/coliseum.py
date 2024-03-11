@@ -65,11 +65,13 @@ def options(args):
     result = []
 
     opponents = "Original"
-    if args.coliseum_opponents_random:
+    # if Coliseum opponents are random or shuffled + random
+    if args.coliseum_opponents_random or args.coliseum_opponents_shuffle_random:
         opponents = "Random"
 
     rewards = "Original"
-    if args.coliseum_rewards_random:
+    # if Coliseum rewards are random or shuffled + random
+    if args.coliseum_rewards_random or args.coliseum_rewards_shuffle_random:
         rewards = "Random"
 
     rewards_visible = "Original"
