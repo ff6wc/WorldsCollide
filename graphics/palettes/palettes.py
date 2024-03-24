@@ -306,6 +306,10 @@ id_palette = {
     368 : "Flowey-pomariin-Undertale",
     369 : "Meiling-HoxNorf-Touhou",
     370 : "Olimar-HoxNorf-Pikmin",
+    371 : "Tao-HoxNorf-Shining",
+    372 : "Tycoon-HoxNorf-FF5",
+    373 : "Chaz-HoxNorf-PS4",
+    374 : "Alys-HoxNorf-PS4",
 }
 
 def get_path(id_):

@@ -322,6 +322,10 @@ id_portrait = {
     413 : "Flowey-pomariin-Undertale",
     414 : "Meiling-HoxNorf-Touhou",
     415 : "Olimar-HoxNorf-Pikmin",
+    416 : "Tao-HoxNorf-Shining",
+    417 : "Tycoon-metalliguy_Gens-FF5",
+    418 : "Chaz-HoxNorf-PS4",
+    419 : "Alys-HoxNorf-PS4",
 }
 
 def get_bin_path(id_):

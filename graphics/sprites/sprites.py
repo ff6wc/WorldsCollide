@@ -321,6 +321,10 @@ id_sprite = {
     366 : "Flowey-pomariin-Undertale",
     367 : "Meiling-HoxNorf-Touhou",
     368 : "Olimar-HoxNorf-Pikmin",
+    369 : "Tao-HoxNorf-Shining",
+    370 : "Tycoon-HoxNorf-FF5",
+    371 : "Chaz-HoxNorf-PS4",
+    372 : "Alys-HoxNorf-PS4",
 }
 
 def get_path(id_):
