@@ -402,3 +402,21 @@ class LongCall(_Instruction):
         LongCall.__init__ = (lambda self, function_address, arg = 0 :
                              super().__init__(opcode, function_address.to_bytes(3, "little"), arg))
         self.__init__(function_address, arg)
+
+
+class SetRNGIndex(_Instruction):
+    def __init__(self, value):
+        src = [
+            asm.LDA(0xeb, asm.DIR),
+            asm.STA(0x1f6d, asm.ABS),  # 0x1f6d is the current index to the RNG table
+            asm.LDA(0x02, asm.IMM8),  # Command size
+            asm.JMP(0x9b5c, asm.ABS)  # Jump to next command
+        ]
+
+        space = Write(Bank.C0, src, 'set RNG index')
+        address = space.start_address
+        opcode = 0xa4
+        _set_opcode_address(opcode, address)
+
+        SetRNGIndex.__init__ = lambda self, value: super().__init__(opcode, value)
+        self.__init__(value)
