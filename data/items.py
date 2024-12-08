@@ -357,6 +357,11 @@ class Items():
             exclude.append(name_id["Cursed Shld"])
         if self.args.permadeath:
             exclude.append(name_id["Fenix Down"])
+        if self.args.exclude_items:
+            try:
+                exclude.extend([name_id[item_name] for item_name in self.args.exclude_items.split(".")])
+            except KeyError as e:
+                raise KeyError(f"Item to exclude with -exi not found: {e}.  Check the spelling and capitalization")
 
         return exclude
 
