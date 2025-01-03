@@ -73,6 +73,8 @@ def flags(args):
         flags += f" -move {args.movement}"
     if args.original_name_display:
         flags += " -ond"
+    if args.scan_all:
+        flags += " -scan"
     if args.warp_all:
         flags += " -warp"
     if args.npc_dialog_tips:
