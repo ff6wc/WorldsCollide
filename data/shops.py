@@ -52,7 +52,9 @@ class Shops():
             Shop.RELIC  : self.type_shops[Shop.RELIC],
         }
         type_items[Shop.ITEM].extend(type_items[Shop.VENDOR])
+        self.shuffle_by_type(type_items, type_shops)
 
+    def shuffle_by_type(self, type_items, type_shops):
         import random
         import collections
         for shop_type in range(1, Shop.SHOP_TYPE_COUNT - 1): # skip EMPTY and VENDOR shop types
@@ -114,6 +116,9 @@ class Shops():
 
     def shuffle_random(self):
         self.shuffle()
+        self.random()
+
+    def random(self):
         if self.args.shop_inventory_shuffle_random_percent == 0:
             return
 
@@ -137,6 +142,45 @@ class Shops():
                     if not sorted_random_indices:
                         return
                 total_index += 1
+
+    def shuffle_world_random(self):
+        self.shuffle_world()
+        self.random()
+
+    def shuffle_world(self):
+        from itertools import chain
+        wob_shop_indicies = chain(range(5,39), range(40,48), [83], [85])
+        wor_shop_indicies = chain(range(48,68), range(72,82), [84])
+
+        self.shuffle_indices(wob_shop_indicies)
+        self.shuffle_indices(wor_shop_indicies)
+
+    def shuffle_indices(self, indices):
+        # shuffle shops at the specified indices (except empty ones)
+        # keeps weapons in weapon shops, armors in armor shops, items in item shops, etc...
+
+        # to prevent duplicates, get list of items for each shop type and sort it by their frequency
+        # picking least frequent last prevents ending up with multiple of same item and only one shop to distribute them to
+        # randomly pick shops of the given type until find one without the item and add it
+        # once the shop has as many items as its shuffled count remove it from the available pool
+        shops_to_shuffle = list()
+        for shop_index in indices:
+            shops_to_shuffle.append(self.all_shops[shop_index])
+
+        type_items = {Shop.WEAPON : [], Shop.ARMOR : [], Shop.ITEM : [], Shop.RELIC : [], Shop.VENDOR : []}
+        for shop in shops_to_shuffle:
+            for item_index in range(shop.item_count):
+                type_items[shop.type].append(shop.items[item_index])
+
+        # shuffle vendor shops with item shops
+        # add vendor shops to list of item shops and vendor shop inventories to list of items in item shops
+        type_shops = {Shop.WEAPON : [], Shop.ARMOR : [], Shop.ITEM : [], Shop.RELIC : [], Shop.VENDOR : []}
+        for shop in shops_to_shuffle:
+            # exclude shops that are inaccesible from shops and type_shops lists
+            if shop.type != Shop.EMPTY and shop.accessible():
+                type_shops[shop.type].append(shop)
+        type_items[Shop.ITEM].extend(type_items[Shop.VENDOR])
+        self.shuffle_by_type(type_items, type_shops)
 
     def clear_inventories(self):
         for shop in self.shops:
@@ -267,6 +311,8 @@ class Shops():
             self.random_tiered()
         elif self.args.shop_inventory_empty:
             self.clear_inventories()
+        elif self.args.shop_inventory_shuffle_world_random:
+            self.shuffle_world_random()
 
         self.assign_dried_meats()
         self.remove_excluded_items()

@@ -49,7 +49,7 @@ def flags(args):
     elif args.chest_contents_empty:
         flags += " -cce"
     elif args.chest_contents_shuffle_by_world_random:
-        flags += " -ccswr {args.chest_contents_shuffle_random_percent}"
+        flags += f" -ccswr {args.chest_contents_shuffle_random_percent}"
     
     if args.chest_random_monsters:
         flags += f" -chrm {args.chest_random_monsters_enemy} {args.chest_random_monsters_boss}"
@@ -95,7 +95,7 @@ def menu(args):
         entries[0] = ("Shuffle + Random", entries[1][1]) # put percent on same line
         del entries[1]                                   # delete random percent line
     elif args.chest_contents_shuffle_by_world_random:
-        entries[0] = ("Shuffle by World", entries[1][1]) # put percent on same line
+        entries[0] = ("WShuffle + Random", entries[1][1]) # put percent on same line
         del entries[1]                                            # delete random percent line
     else:
         entries[0] = (entries[0][1], "")

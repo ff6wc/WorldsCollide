@@ -12,6 +12,9 @@ def parse(parser):
                                  help = "Shop inventories randomized based on type and tier. All weapon shops randomized, all armor shops, etc...")
     shops_inventory.add_argument("-sie", "--shop-inventory-empty", action = "store_true",
                                  help = "Shop inventories empty")
+    shops_inventory.add_argument("-siswr", "--shop-inventory-shuffle-world-random",
+                                 default = None, type = int, metavar = "PERCENT", choices = range(101),
+                                 help = "Shop inventories randomized based on type by world. All weapon shops randomized, all armor shops, etc...")
 
     shops_prices = shops.add_mutually_exclusive_group()
     shops_prices.add_argument("-sprv", "--shop-prices-random-value", default = None, type = int,
@@ -58,6 +61,10 @@ def process(args):
         args.shop_inventory_shuffle_random_percent = args.shop_inventory_shuffle_random
         args.shop_inventory_shuffle_random = True
 
+    if args.shop_inventory_shuffle_world_random is not None:
+        args.shop_inventory_shuffle_random_percent = args.shop_inventory_shuffle_world_random
+        args.shop_inventory_shuffle_world_random = True
+
     args._process_min_max("shop_prices_random_value")
     args._process_min_max("shop_prices_random_percent")
 
@@ -70,6 +77,8 @@ def flags(args):
         flags += " -sirt"
     elif args.shop_inventory_empty:
         flags += " -sie"
+    elif args.shop_inventory_shuffle_world_random:
+        flags += f" -siswr {args.shop_inventory_shuffle_random_percent}"
 
     if args.shop_prices_random_value:
         flags += f" -sprv {args.shop_prices_random_value_min} {args.shop_prices_random_value_max}"
@@ -116,6 +125,8 @@ def options(args):
         inventory = "Random Tiered"
     elif args.shop_inventory_empty:
         inventory = "Empty"
+    elif args.shop_inventory_shuffle_world_random:
+        inventory = "Shuffle by World + Random"
 
     price = "Original"
     if args.shop_prices_random_value:
@@ -146,6 +157,8 @@ def options(args):
     result = [("Inventory", inventory, "shops_inventory")]
     if args.shop_inventory_shuffle_random:
         result.append(("Random Percent", f"{args.shop_inventory_shuffle_random_percent}%", "shops_random_percent"))
+    elif args.shop_inventory_shuffle_world_random:
+        result.append(("Random Percent", f"{args.shop_inventory_shuffle_random_percent}%", "shops_random_percent"))
 
     result.extend([
         ("Price", price, "price"),
@@ -166,6 +179,9 @@ def menu(args):
     entries = options(args)
     if args.shop_inventory_shuffle_random:
         entries[0] = ("Shuffle + Random", entries[1][1])    # put percent on same line
+        del entries[1]                                      # delete random percent line
+    elif args.shop_inventory_shuffle_world_random:
+        entries[0] = ("WShuffle + Random", entries[1][1])    # put percent on same line
         del entries[1]                                      # delete random percent line
     else:
         entries[0] = (entries[0][1], "")
