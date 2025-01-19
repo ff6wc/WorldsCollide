@@ -201,14 +201,14 @@ class Chests():
         import copy
         chests_shuffle = list()
         for index in indices:
-            chest = copy.deepcopy(self.chests[index])
+            chest = copy.deepcopy(self.all_chests[index])
             if chest.type in types:
                 chests_shuffle.append(chest)
         random.shuffle(chests_shuffle)
 
         shuffle_index = 0
         for index in indices:
-            chest = self.chests[index]
+            chest = self.all_chests[index]
             if chest.type in types:
                 shuffled_chest = chests_shuffle[shuffle_index]
                 shuffle_index += 1
@@ -398,7 +398,10 @@ class Chests():
             self.remove_excluded_items()
 
         if self.args.chest_monsters_shuffle:
-            self.shuffle([Chest.MONSTER])
+            if self.args.chest_contents_shuffle_by_world_random:
+                self.shuffle_by_world([Chest.MONSTER])
+            else:
+                self.shuffle([Chest.MONSTER])
 
         # add randomized MIABs after other contents randomization/shuffle is complete
         if self.args.chest_random_monsters_enemy > 0:
