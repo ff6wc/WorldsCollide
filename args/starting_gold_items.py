@@ -107,6 +107,8 @@ def options(args):
     for item in args.start_items_list:
         from constants.items import id_name
         item_name = id_name[item.id]
+        if not item_name.endswith("s"):
+            item_name = item_name + "s"
         opts += [
             (f"Start {item_name}", item.count, "start_items")
         ]
