@@ -1,3 +1,5 @@
+import random
+
 def name():
     return "Starting Gold/Items"
 
@@ -30,12 +32,12 @@ def process(args):
     args.start_items_list = []
     if args.start_items != None:
         values = args.start_items.split(".")
-        if len(values) % 2 == 1:
+        if len(values) % 3 != 0:
             import sys
             args.parser.print_usage()
-            print(f"{sys.argv[0]}: error: start-items: Invalid number of entries, they must come in pairs 'item_id.item_count'")
+            print(f"{sys.argv[0]}: error: start-items: Invalid number of entries, they must come in groups of 3 'item_id.min.max'")
             sys.exit(1)
-        for index in range(0, len(values), 2):
+        for index in range(0, len(values), 3):
             item_id = 0
             try:
                 item_id = int(values[index])
@@ -50,20 +52,35 @@ def process(args):
                 print(f"{sys.argv[0]}: error: start-items: '{item_id}' is an invalid value for an item id. It must be between 0-254")
                 sys.exit(1)
 
-            item_count = 0
+            min = 0
             try:
-                item_count = int(values[index + 1])
+                min = int(values[index + 1])
             except:
                 import sys
                 args.parser.print_usage()
                 print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index+1]}'")
                 sys.exit(1)
-            if item_count <= 0 or item_count > 99:
+            if min < 0 or min > 99:
                 import sys
                 args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: '{item_count}' is an invalid count for an item. It must be between 1-99")
+                print(f"{sys.argv[0]}: error: start-items: '{min}' is an invalid min for an item. It must be between 0-99")
                 sys.exit(1)
 
+            max = 0
+            try:
+                max = int(values[index + 2])
+            except:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index+2]}'")
+                sys.exit(1)
+            if max <= 0 or max > 99:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: '{max}' is an invalid count for an item. It must be between 1-99")
+                sys.exit(1)
+
+            item_count = random.sample(range(min, max + 1), 1)[0]
             item = Item(item_id, item_count)
             args.start_items_list.append(item)
 
