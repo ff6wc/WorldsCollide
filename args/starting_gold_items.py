@@ -1,3 +1,5 @@
+import random
+
 def name():
     return "Starting Gold/Items"
 
@@ -20,9 +22,79 @@ def parse(parser):
                                      help = "Start game with %(metavar)s different random tools"),
     starting_gold_items.add_argument("-sj", "--start-junk", default = 0, type = int, choices = range(25), metavar = "COUNT",
                                      help = "Start game with %(metavar)s unique low tier items. Includes weapons, armors, helmets, shields, and relics"),
+    starting_gold_items.add_argument("-si", "--start-items", default = None, type = str, help = "Start game with custom items.")
 
 def process(args):
-    pass
+    class Item:
+        def __init__(self, _id, count):
+            self.id = _id
+            self.count = count
+    args.start_items_list = []
+    if args.start_items != None:
+        values = args.start_items.split(".")
+        total_item_commands = 0
+        if len(values) % 3 != 0:
+            import sys
+            args.parser.print_usage()
+            print(f"{sys.argv[0]}: error: start-items: Invalid number of entries, they must come in groups of 3 'item_id.min.max'")
+            sys.exit(1)
+        for index in range(0, len(values), 3):
+            item_id = 0
+            try:
+                item_id = int(values[index])
+            except:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index]}'")
+                sys.exit(1)
+            if item_id < 0 or item_id >= 255:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: '{item_id}' is an invalid value for an item id. It must be between 0-254")
+                sys.exit(1)
+
+            min = 0
+            try:
+                min = int(values[index + 1])
+            except:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index+1]}'")
+                sys.exit(1)
+            if min > 99:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: '{min}' is an invalid min for an item. It must be less than 99")
+                sys.exit(1)
+
+            max = 0
+            try:
+                max = int(values[index + 2])
+            except:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index+2]}'")
+                sys.exit(1)
+            if max <= 0 or max > 99:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: '{max}' is an invalid count for an item. It must be between 1-99")
+                sys.exit(1)
+            if max < min:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: max:'{max}' must be greater than the min:'{min}'")
+
+            item_count = random.sample(range(min, max + 1), 1)[0]
+            if item_count > 0:
+                item = Item(item_id, item_count)
+                args.start_items_list.append(item)
+                total_item_commands += 1
+        if total_item_commands > 30 :
+            import sys
+            args.parser.print_usage()
+            print(f"{sys.argv[0]}: error: start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 30 are supported")
+            sys.exit(1)
 
 def flags(args):
     flags = ""
@@ -41,6 +113,8 @@ def flags(args):
         flags += f" -sto {args.start_tools}"
     if args.start_junk != 0:
         flags += f" -sj {args.start_junk}"
+    if args.start_items != None:
+        flags += f" -si {args.start_items}"
 
     return flags
 
@@ -57,6 +131,15 @@ def options(args):
     if args.start_junk != 0:
         opts += [
             ("Start Junk", args.start_junk, "start_junk")
+        ]
+
+    for item in args.start_items_list:
+        from constants.items import id_name
+        item_name = id_name[item.id]
+        if not item_name.endswith("s"):
+            item_name = item_name + "s"
+        opts += [
+            (f"Start {item_name}", item.count, "start_items")
         ]
 
     return opts

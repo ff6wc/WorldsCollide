@@ -225,6 +225,11 @@ class Start(Event):
                 field.AddItem(id_name[junk_id], sound_effect = False)
             ]
 
+        for item in self.args.start_items_list:
+            src += [
+                field.AddItems(item.id, item.count, sound_effect = False),
+            ]
+
         if self.args.debug:
             src += [
                 field.AddItem("Dried Meat", sound_effect = False),
