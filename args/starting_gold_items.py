@@ -93,7 +93,7 @@ def process(args):
     if total_item_count > 100 :
         import sys
         args.parser.print_usage()
-        print(f"{sys.argv[0]}: error: start-items: '{total_item_count}' Items are trying to be added in total. Only upto 100 items are supported")
+        print(f"{sys.argv[0]}: error: start-items: '{total_item_count}' Items are trying to be added in total. Only up to 100 items are supported")
         sys.exit(1)
 
 def flags(args):
