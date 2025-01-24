@@ -226,10 +226,9 @@ class Start(Event):
             ]
 
         for item in self.args.start_items_list:
-            for i in range(item.count):
-                src += [
-                    field.AddItem(item.id, sound_effect = False),
-                ]
+            src += [
+                field.AddItems(item.id, item.count, sound_effect = False),
+            ]
 
         if self.args.debug:
             src += [

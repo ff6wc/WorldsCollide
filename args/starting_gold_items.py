@@ -30,9 +30,9 @@ def process(args):
             self.id = _id
             self.count = count
     args.start_items_list = []
-    total_item_count = 0
     if args.start_items != None:
         values = args.start_items.split(".")
+        total_item_commands = 0
         if len(values) % 3 != 0:
             import sys
             args.parser.print_usage()
@@ -89,12 +89,12 @@ def process(args):
             if item_count > 0:
                 item = Item(item_id, item_count)
                 args.start_items_list.append(item)
-                total_item_count += item_count
-    if total_item_count > 100 :
-        import sys
-        args.parser.print_usage()
-        print(f"{sys.argv[0]}: error: start-items: '{total_item_count}' Items are trying to be added in total. Only up to 100 items are supported")
-        sys.exit(1)
+                total_item_commands += 1
+        if total_item_commands > 30 :
+            import sys
+            args.parser.print_usage()
+            print(f"{sys.argv[0]}: error: start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 30 are supported")
+            sys.exit(1)
 
 def flags(args):
     flags = ""
