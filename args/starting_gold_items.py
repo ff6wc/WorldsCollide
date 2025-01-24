@@ -79,13 +79,10 @@ def process(args):
                 args.parser.print_usage()
                 print(f"{sys.argv[0]}: error: start-items: '{max}' is an invalid count for an item. It must be between 1-99")
                 sys.exit(1)
-<<<<<<< Updated upstream
-=======
             if max < min:
                 import sys
                 args.parser.print_usage()
                 print(f"{sys.argv[0]}: error: start-items: max:'{max}' must be greater than the min:'{min}'")
->>>>>>> Stashed changes
 
             item_count = random.sample(range(min, max + 1), 1)[0]
             if item_count > 0:
