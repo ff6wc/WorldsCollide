@@ -60,10 +60,10 @@ def process(args):
                 args.parser.print_usage()
                 print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index+1]}'")
                 sys.exit(1)
-            if min < 0 or min > 99:
+            if min > 99:
                 import sys
                 args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: '{min}' is an invalid min for an item. It must be between 0-99")
+                print(f"{sys.argv[0]}: error: start-items: '{min}' is an invalid min for an item. It must be less than 99")
                 sys.exit(1)
 
             max = 0
@@ -79,10 +79,18 @@ def process(args):
                 args.parser.print_usage()
                 print(f"{sys.argv[0]}: error: start-items: '{max}' is an invalid count for an item. It must be between 1-99")
                 sys.exit(1)
+<<<<<<< Updated upstream
+=======
+            if max < min:
+                import sys
+                args.parser.print_usage()
+                print(f"{sys.argv[0]}: error: start-items: max:'{max}' must be greater than the min:'{min}'")
+>>>>>>> Stashed changes
 
             item_count = random.sample(range(min, max + 1), 1)[0]
-            item = Item(item_id, item_count)
-            args.start_items_list.append(item)
+            if item_count > 0:
+                item = Item(item_id, item_count)
+                args.start_items_list.append(item)
 
 def flags(args):
     flags = ""
