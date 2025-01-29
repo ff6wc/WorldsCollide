@@ -22,7 +22,7 @@ def parse(parser):
                                      help = "Start game with %(metavar)s different random tools"),
     starting_gold_items.add_argument("-sj", "--start-junk", default = 0, type = int, choices = range(25), metavar = "COUNT",
                                      help = "Start game with %(metavar)s unique low tier items. Includes weapons, armors, helmets, shields, and relics"),
-    starting_gold_items.add_argument("-si", "--start-items", default = None, type = str, help = "Start game with custom items.")
+    starting_gold_items.add_argument("-si", "--start-items", default = None, type = str, help = "Start game with items.")
 
 def process(args):
     class Item:
@@ -30,6 +30,17 @@ def process(args):
             self.id = _id
             self.count = count
     args.start_items_list = []
+
+    # convert old starting item flags to -si type values
+    if args.start_moogle_charms != 0:
+        args.start_items_list.append(Item(222, args.start_moogle_charms))
+    if args.start_sprint_shoes != 0:
+        args.start_items_list.append(Item(230, args.start_sprint_shoes))
+    if args.start_warp_stones != 0:
+        args.start_items_list.append(Item(253, args.start_warp_stones))
+    if args.start_fenix_downs != 0:
+        args.start_items_list.append(Item(240, args.start_fenix_downs))
+
     if args.start_items != None:
         values = args.start_items.split(".")
         total_item_commands = 0
@@ -121,10 +132,6 @@ def flags(args):
 def options(args):
     opts = [
         ("Start Gold", args.gold, "gold"),
-        ("Start Moogle Charms", args.start_moogle_charms, "start_moogle_charms"),
-        ("Start Sprint Shoes", args.start_sprint_shoes, "start_sprint_shoes"),
-        ("Start Warp Stones", args.start_warp_stones, "start_warp_stones"),
-        ("Start Fenix Downs", args.start_fenix_downs, "start_fenix_downs"),
         ("Start Tools", args.start_tools, "start_tools"),
     ]
     

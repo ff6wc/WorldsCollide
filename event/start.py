@@ -183,22 +183,6 @@ class Start(Event):
 
     def start_items_mod(self):
         src = []
-        for mc in range(self.args.start_moogle_charms):
-            src += [
-                field.AddItem("Moogle Charm", sound_effect = False),
-            ]
-        for mc in range(self.args.start_sprint_shoes):
-            src += [
-                field.AddItem("Sprint Shoes", sound_effect = False),
-            ]
-        for ws in range(self.args.start_warp_stones):
-            src += [
-                field.AddItem("Warp Stone", sound_effect = False),
-            ]
-        for fd in range(self.args.start_fenix_downs):
-            src += [
-                field.AddItem("Fenix Down", sound_effect = False),
-            ]
 
         tools = ["NoiseBlaster", "Bio Blaster", "Flash", "Chain Saw",
                  "Debilitator", "Drill", "Air Anchor", "AutoCrossbow"]
