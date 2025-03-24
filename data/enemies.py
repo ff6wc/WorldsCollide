@@ -344,6 +344,61 @@ class Enemies():
                     self.set_common_drop(enemy.id, steals_drops.pop(0))
                     self.set_rare_drop(enemy.id, steals_drops.pop(0))
 
+    def shuffle_drops_random(self):
+            import random
+            from data.bosses import final_battle_enemy_name
+
+            # Assemble the list of steals and drops
+            drops = []
+            for enemy in self.enemies:
+                if len(enemy.name) > 0:
+                    loot_list = []
+                    if enemy.id not in final_battle_enemy_name.keys():
+                        loot_list += [enemy.drop_common, enemy.drop_rare]
+                    drops.extend(loot_list)
+
+            # Randomize the requested number
+            random_percent = self.args.shuffle_drops_random_percent / 100.0
+            number_random = int(random_percent * len(drops))
+            which_random = [a for a in range(len(drops))]
+            random.shuffle(which_random)
+            for id in range(number_random):
+                drops[which_random[id]] = self.items.get_random()
+
+            # Shuffle list & reassign to enemies
+            random.shuffle(drops)
+            for enemy in self.enemies:
+                if len(enemy.name) > 0:
+                    if enemy.id not in final_battle_enemy_name.keys():
+                        self.set_common_drop(enemy.id, drops.pop(0))
+                        self.set_rare_drop(enemy.id, drops.pop(0))
+
+    def shuffle_steals_random(self):
+        import random
+        from data.bosses import final_battle_enemy_name
+
+        # Assemble the list of steals and drops
+        steals = []
+        for enemy in self.enemies:
+            if len(enemy.name) > 0:
+                loot_list = [enemy.steal_common, enemy.steal_rare]
+                steals.extend(loot_list)
+
+        # Randomize the requested number
+        random_percent = self.args.shuffle_steals_random_percent / 100.0
+        number_random = int(random_percent * len(steals))
+        which_random = [a for a in range(len(steals))]
+        random.shuffle(which_random)
+        for id in range(number_random):
+            steals[which_random[id]] = self.items.get_random()
+
+        # Shuffle list & reassign to enemies
+        random.shuffle(steals)
+        for enemy in self.enemies:
+            if len(enemy.name) > 0:
+                self.set_common_steal(enemy.id, steals.pop(0))
+                self.set_rare_steal(enemy.id, steals.pop(0))
+
     def set_escapable(self):
         import random
 
@@ -371,6 +426,11 @@ class Enemies():
 
         if self.args.shuffle_steals_drops:
             self.shuffle_steals_drops_random()
+        else:
+            if self.args.shuffle_steals:
+                self.shuffle_steals_random()
+            if self.args.shuffle_drops:
+                self.shuffle_drops_random()
 
         if self.args.permadeath:
             self.remove_fenix_downs()
