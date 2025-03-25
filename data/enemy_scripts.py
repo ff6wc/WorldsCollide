@@ -281,13 +281,13 @@ class EnemyScripts():
         if self.args.doom_gaze_no_escape:
             self.doom_gaze_no_escape_mod()
 
-            if self.args.boss_battles_shuffle or self.args.boss_battles_random:
+            if self.args.boss_battles_shuffle or self.args.boss_battles_random or self.args.boss_battles_world_shuffle:
                 self.doom_gaze_event_bit_mod()
 
         if self.args.wrexsoul_no_zinger:
             self.wrexsoul_no_zinger_mod()
 
-        if self.args.boss_battles_shuffle or self.args.boss_battles_random:
+        if self.args.boss_battles_shuffle or self.args.boss_battles_random or self.args.boss_battles_world_shuffle:
             # the animation chadarnook uses to switch between demon and painting
             # breaks with other battle backgrounds, they turn weird colors and look very glitchy
             self.chadarnook_flashing_mod()

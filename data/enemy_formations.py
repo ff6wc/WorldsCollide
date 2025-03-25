@@ -163,7 +163,7 @@ class EnemyFormations():
         self.formations[387].event_script = 0
         self.formations[387].enable_event_script = 0
 
-        if self.args.boss_battles_shuffle or self.args.boss_battles_random:
+        if self.args.boss_battles_shuffle or self.args.boss_battles_random or self.args.boss_battles_world_shuffle:
             # second srbehemoth only appears as a front attack with shuffled/random boss battles
             self.formations[424].disable_front_attack = 0
             self.formations[424].disable_back_attack = 1

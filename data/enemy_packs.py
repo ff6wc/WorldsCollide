@@ -59,6 +59,34 @@ class EnemyPacks():
 
         return replaceable + self._replaceable_dragons() + self._replaceable_statues()
 
+    # Returns the list of all world of ruin boss packs that can be used during randomization
+    def _replaceable_wor_bosses(self):
+        dragon_packs = list(bosses.dragon_pack_name)
+        statue_packs = list(bosses.statue_pack_name)
+        boss_packs = list(bosses.wor_pack_name)
+        replaceable = [boss for boss in boss_packs if boss not in statue_packs and boss not in dragon_packs]
+
+        if not self.args.shuffle_random_phunbaba3:
+            self.event_boss_replacements[self.PHUNBABA3] = self.PHUNBABA3
+            if self.PHUNBABA3 in replaceable:
+                replaceable.remove(self.PHUNBABA3)
+
+        if not self.args.doom_gaze_no_escape:
+            # if doom gaze can escape, don't shuffle/randomize him
+            # possibly having multiple doom gazes while trying to keep track of hp is awkward
+            # how would that work with him being in his original spot and the others? How to know when to get bahamut esper?
+            self.event_boss_replacements[self.DOOM_GAZE] = self.DOOM_GAZE
+
+            if self.DOOM_GAZE in replaceable:
+                replaceable.remove(self.DOOM_GAZE)
+
+        return replaceable + self._replaceable_dragons() + self._replaceable_statues()
+
+    # Returns the list of all world of balance boss packs that can be used during randomization
+    def _replaceable_wob_bosses(self):
+        replaceable = list(bosses.wob_pack_name)
+        return replaceable
+
     # Statue locations that become available for the general boss pool
     def _replaceable_statues(self):
         import random
@@ -144,6 +172,26 @@ class EnemyPacks():
             self.event_boss_replacements[boss] = bosses_possible[index]
 
         self.phunbaba3_safety_check(bosses_to_replace)
+
+    def world_shuffle_event_bosses(self):
+        import random
+
+        wob_bosses_to_replace = self._replaceable_wob_bosses()
+        wob_bosses_possible = wob_bosses_to_replace.copy()
+
+        random.shuffle(wob_bosses_possible)
+        for index, boss in enumerate(wob_bosses_to_replace):
+            self.event_boss_replacements[boss] = wob_bosses_possible[index]
+
+        wor_bosses_to_replace = self._replaceable_wor_bosses()
+        wor_bosses_possible = wor_bosses_to_replace.copy()
+
+        random.shuffle(wor_bosses_possible)
+        for index, boss in enumerate(wor_bosses_to_replace):
+            self.event_boss_replacements[boss] = wor_bosses_possible[index]
+
+        # I don't think this is needed because phunbaba 3 should be in wor but just in case
+        self.phunbaba3_safety_check(wob_bosses_to_replace)
 
     def randomize_event_bosses(self):
         import args, random, objectives
@@ -377,6 +425,9 @@ class EnemyPacks():
             self.shuffle_event_bosses()
         elif self.args.boss_battles_random:
             self.randomize_event_bosses()
+        elif self.args.boss_battles_world_shuffle:
+            self.world_shuffle_event_bosses()
+
 
         self._handle_original_shuffle_dragons()
         self._handle_original_shuffle_statues()
