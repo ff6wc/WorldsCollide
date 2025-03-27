@@ -31,6 +31,8 @@ class EnemyFormations():
 
         self.dragons = list(bosses.dragon_formation_name)
         self.bosses = list(bosses.normal_formation_name)
+        self.wob_bosses = list(bosses.wob_formation_name)
+        self.wor_bosses = list(bosses.wor_formation_name)
 
         # formations not to include in "normal" (i.e. non-boss/dragon) pool
         self.non_normal = [*self.dragons, *self.bosses, 4, 40, 42, 43, 59, 60, 63, 252, 335,
@@ -124,6 +126,22 @@ class EnemyFormations():
             return random.choice(self.bosses)
 
         possible_bosses = [boss_id for boss_id in self.bosses if boss_id not in exclude]
+        return random.choice(possible_bosses)
+
+    def get_random_wob_boss(self, exclude = None):
+        import random
+        if exclude is None:
+            return random.choice(self.wob_bosses)
+
+        possible_bosses = [boss_id for boss_id in self.wob_bosses if boss_id not in exclude]
+        return random.choice(possible_bosses)
+
+    def get_random_wor_boss(self, exclude = None):
+        import random
+        if exclude is None:
+            return random.choice(self.wor_bosses)
+
+        possible_bosses = [boss_id for boss_id in self.wor_bosses if boss_id not in exclude]
         return random.choice(possible_bosses)
 
     def get_random_dragon(self):

@@ -159,6 +159,53 @@ normal_formation_name = {
     487 : "Tritoch",
     505 : "Kefka (Narshe)",
 }
+
+wob_formation_name = {
+    4   : "Marshal",
+    79  : "Rizopas",
+    387 : "Ultros 3",
+    409 : "Leader",
+    432 : "Whelk",
+    435 : "Vargas",
+    436 : "TunnelArmr",
+    437 : "GhostTrain",
+    438 : "Dadaluma",
+    439 : "Ifrit/Shiva",
+    440 : "Cranes",
+    441 : "Number 024",
+    442 : "Number 128",
+    449 : "FlameEater",
+    450 : "AtmaWeapon",
+    451 : "Nerapa",
+    459 : "Air Force",
+    473 : "Ultros 1",
+    474 : "Ultros 2",
+    477 : "Ultros/Chupon",
+    505 : "Kefka (Narshe)",
+}
+
+wor_formation_name = {
+    354 : "MagiMaster",
+    422 : "Phunbaba 3",
+    423 : "Phunbaba 4",
+    444 : "Umaro",
+    446 : "Guardian",
+    452 : "SrBehemoth",
+    454 : "Tentacles",
+    455 : "Dullahan",
+    456 : "Chadarnook",
+    460 : "Stooges",
+    462 : "Wrexsoul",
+    463 : "Doom Gaze",
+    464 : "Hidon",
+    468 : "Doom",
+    469 : "Goddess",
+    470 : "Poltrgeist",
+    482 : "Atma",
+    484 : "Inferno",
+    487 : "Tritoch",
+}
+
 normal_enemy_name = {
     100 : "Marshal",
     340 : "Piranha",

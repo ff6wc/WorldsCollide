@@ -19,6 +19,9 @@ def parse(parser):
     fixed.add_argument("-fer", "--fixed-encounters-random",
                        default = None, type = int, metavar = "PERCENT", choices = range(101),
                        help = "Fixed encounters are randomized. Lete River, Serpent Trench, Mine Cart, Imperial Camp, ...")
+    fixed.add_argument("-fewr", "--fixed-encounters-world-random",
+                       default = None, type = int, metavar = "PERCENT", choices = range(101),
+                       help = "Fixed encounters are randomized with encounters from the same world. Lete River, Serpent Trench, Mine Cart, Imperial Camp, ...")
 
     escapable = encounters.add_mutually_exclusive_group()
     escapable.add_argument("-escr", "--encounters-escapable-random",
@@ -27,7 +30,7 @@ def parse(parser):
 
 def process(args):
     args.random_encounters_original = not args.random_encounters_shuffle and args.random_encounters_random is None and not args.random_encounters_world_shuffle
-    args.fixed_encounters_original = args.fixed_encounters_random is None
+    args.fixed_encounters_original = args.fixed_encounters_random is None and args.fixed_encounters_world_random is None
     args.encounters_escapable_original = args.encounters_escapable_random is None
 
 def flags(args):
@@ -44,6 +47,9 @@ def flags(args):
 
     if args.fixed_encounters_random is not None:
         flags += f" -fer {args.fixed_encounters_random}"
+    elif args.fixed_encounters_world_random is not None:
+        flags += f" -fewr {args.fixed_encounters_world_random}"
+
 
     if args.encounters_escapable_random is not None:
         flags += f" -escr {args.encounters_escapable_random}"
@@ -70,6 +76,8 @@ def options(args):
     fixed_encounters = "Original"
     if args.fixed_encounters_random is not None:
         fixed_encounters = "Random"
+    elif args.fixed_encounters_world_random is not None:
+        fixed_encounters = "WRandom"
 
     result.append(("Fixed Encounters", fixed_encounters, "fixed_encounters"))
     if args.fixed_encounters_random is not None:
