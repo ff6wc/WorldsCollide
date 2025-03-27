@@ -12,6 +12,8 @@ def parse(parser):
                         help = "Random encounters are randomized")
     random.add_argument("-rechu", "--random-encounters-chupon", action = "store_true",
                         help = "All Random Encounters are replaced with Chupon (Coliseum)")
+    random.add_argument("-rews", "--random-encounters-world-shuffle", action = "store_true",
+                        help = "Random encounters are shuffled ny world")
 
     fixed = encounters.add_mutually_exclusive_group()
     fixed.add_argument("-fer", "--fixed-encounters-random",
@@ -24,7 +26,7 @@ def parse(parser):
                            help = "Percent of random encounters escapable including with warp or smoke bombs")
 
 def process(args):
-    args.random_encounters_original = not args.random_encounters_shuffle and args.random_encounters_random is None
+    args.random_encounters_original = not args.random_encounters_shuffle and args.random_encounters_random is None and not args.random_encounters_world_shuffle
     args.fixed_encounters_original = args.fixed_encounters_random is None
     args.encounters_escapable_original = args.encounters_escapable_random is None
 
@@ -37,6 +39,8 @@ def flags(args):
         flags += f" -rer {args.random_encounters_random}"
     elif args.random_encounters_chupon:
         flags += " -rechu"
+    elif args.random_encounters_world_shuffle:
+        flags += " -rews"
 
     if args.fixed_encounters_random is not None:
         flags += f" -fer {args.fixed_encounters_random}"
@@ -56,6 +60,8 @@ def options(args):
         random_encounters = "Random"
     elif args.random_encounters_chupon:
         random_encounters = "Chupon"
+    elif args.random_encounters_world_shuffle:
+        random_encounters = "WShuffle"
 
     result.append(("Random Encounters", random_encounters, "random_encounters"))
     if args.random_encounters_random is not None:
