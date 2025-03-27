@@ -42,8 +42,8 @@ class EnemyFormations():
 
         # the method for forming this list and the next was flawed/how it would be used wasn't understood.
         # revisit and redefine these in a simpilier way.
-        self.wob = [*range(0, 103), *range(104, 114), *range(115, 128), *range(129,134), 135,136,
-                    *range(138, 171), *range(174, 192), 210, *range(356, 362),
+        self.wob = [*range(0, 103), *range(104, 114), *range(115, 126), 135, 136,
+                    *range(139, 171), *range(174, 192), 210, *range(356, 362),
                     *range(373, 384), *range(402, 409), *range(410,412), *range(416,420), 434, 479]
         self.wob_set = set(self.wob)
 

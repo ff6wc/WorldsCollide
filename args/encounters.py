@@ -13,7 +13,10 @@ def parse(parser):
     random.add_argument("-rechu", "--random-encounters-chupon", action = "store_true",
                         help = "All Random Encounters are replaced with Chupon (Coliseum)")
     random.add_argument("-rews", "--random-encounters-world-shuffle", action = "store_true",
-                        help = "Random encounters are shuffled ny world")
+                        help = "Random encounters are shuffled by world")
+    random.add_argument("-rewr", "--random-encounters-world-random",
+                        default = None, type = int, metavar = "PERCENT", choices = range(101),
+                        help = "Random encounters are randomized with encounters from the same world")
 
     fixed = encounters.add_mutually_exclusive_group()
     fixed.add_argument("-fer", "--fixed-encounters-random",
@@ -29,7 +32,8 @@ def parse(parser):
                            help = "Percent of random encounters escapable including with warp or smoke bombs")
 
 def process(args):
-    args.random_encounters_original = not args.random_encounters_shuffle and args.random_encounters_random is None and not args.random_encounters_world_shuffle
+    args.random_encounters_original = not args.random_encounters_shuffle and args.random_encounters_random is None \
+          and not args.random_encounters_world_shuffle and args.random_encounters_world_random is None
     args.fixed_encounters_original = args.fixed_encounters_random is None and args.fixed_encounters_world_random is None
     args.encounters_escapable_original = args.encounters_escapable_random is None
 
@@ -44,6 +48,8 @@ def flags(args):
         flags += " -rechu"
     elif args.random_encounters_world_shuffle:
         flags += " -rews"
+    elif args.fixed_encounters_world_random is not None:
+        flags += f" -rewr {args.fixed_encounters_world_random}"
 
     if args.fixed_encounters_random is not None:
         flags += f" -fer {args.fixed_encounters_random}"
@@ -68,10 +74,14 @@ def options(args):
         random_encounters = "Chupon"
     elif args.random_encounters_world_shuffle:
         random_encounters = "WShuffle"
+    elif args.fixed_encounters_world_random is not None:
+        random_encounters = "WRandom"
 
     result.append(("Random Encounters", random_encounters, "random_encounters"))
     if args.random_encounters_random is not None:
         result.append(("Boss Percent", f"{args.random_encounters_random}%", "random_encounters_random"))
+    elif args.fixed_encounters_world_random is not None:
+        result.append(("Boss Percent", f"{args.fixed_encounters_world_random}%", "fixed_encounters_world_random"))
 
     fixed_encounters = "Original"
     if args.fixed_encounters_random is not None:

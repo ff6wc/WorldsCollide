@@ -371,6 +371,28 @@ class Enemies():
 
         self.packs.randomize_packs(packs, boss_percent)
 
+    def randomize_encounters_by_world(self, maps):
+        # find all packs that are randomly encountered in zones
+        wob_packs = []
+        wor_packs = []
+        boss_percent = self.args.random_encounters_world_random / 100.0
+        for zone in self.zones.zones:
+            if self.skip_shuffling_zone(maps, zone):
+                continue
+
+            for x in range(zone.PACK_COUNT):
+                if self.skip_shuffling_pack(zone.packs[x], zone.encounter_rates[x]):
+                    continue
+                pack = zone.packs[x]
+                is_wob = self.formations.is_wob(self.packs.packs[pack].formations[0])
+                if is_wob:
+                    wob_packs.append(pack)
+                else:
+                    wor_packs.append(pack)
+
+        self.packs.randomize_wob_packs(wob_packs, boss_percent)
+        self.packs.randomize_wor_packs(wor_packs, boss_percent)
+
     def randomize_loot(self):
         for enemy in self.enemies:
             self.set_common_steal(enemy.id, self.items.get_random())
@@ -457,6 +479,8 @@ class Enemies():
             self.chupon_encounters(maps)
         elif self.args.random_encounters_world_shuffle:
             self.world_shuffle_encounters(maps)
+        elif self.args.random_encounters_world_random is not None:
+            self.randomize_encounters_by_world(maps)
         elif not self.args.random_encounters_original:
             self.randomize_encounters(maps)
 
