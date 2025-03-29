@@ -11,9 +11,12 @@ def parse(parser):
                          help = "MagiMaster does not cast Ultima before death")
     boss_ai.add_argument("-cmd", "--chadarnook-more-demon", action = "store_true",
                          help = "Chadarnook demon form appears for longer and does not immediately switch back to painting")
+    boss_ai.add_argument("-rt", "--rizopas-timer", default = [5, 55], type = int,
+                            nargs = 2, metavar = ("MIN", "MAX"), choices = range(5, 201),
+                            help = "Custom range for seconds before Rizopas will appear")
 
 def process(args):
-    pass
+    args._process_min_max("rizopas_timer")
 
 def flags(args):
     flags = ""
@@ -26,15 +29,20 @@ def flags(args):
         flags += " -mmnu"
     if args.chadarnook_more_demon:
         flags += " -cmd"
+    if args.rizopas_timer_min != 5 or args.rizopas_timer_max != 55:
+        flags += f" -rt {args.rizopas_timer_min} {args.rizopas_timer_max}"
 
     return flags
 
 def options(args):
+    rizopas_timer = f"{args.rizopas_timer_min}s-{args.rizopas_timer_max}s"
+
     return [
         ("Doom Gaze No Escape", args.doom_gaze_no_escape, "doom_gaze_no_escape"),
         ("Wrexsoul No Zinger", args.wrexsoul_no_zinger, "wrexsoul_no_zinger"),
         ("MagiMaster No Ultima", args.magimaster_no_ultima, "magimaster_no_ultima"),
         ("Chadarnook More Demon", args.chadarnook_more_demon, "chadarnook_more_demon"),
+        ("Rizopas Timer", rizopas_timer, "rizopas_timer"),
     ]
 
 def menu(args):

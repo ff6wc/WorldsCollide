@@ -57,6 +57,8 @@ class EnemyScripts():
 
         import random
         random_time = random.randint(5, 55) # average of 30
+        if self.args.rizopas_timer_min != 100 or self.args.rizopas_timer_max != 100:
+            random_time = random.randint(self.args.rizopas_timer_min, self.args.rizopas_timer_max)
 
         original_time = 60
         if random_time == original_time:
