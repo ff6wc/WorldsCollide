@@ -22,7 +22,8 @@ def parse(parser):
 
 def process(args):
     if args.shuffle_steals_drops is not None:
-        args.shuffle_steals_drops_random_percent = args.shuffle_steals_drops
+        args.shuffle_steals_random_percent = args.shuffle_steals_drops
+        args.shuffle_drops_random_percent = args.shuffle_steals_drops
         args.shuffle_steals_drops = True
     if args.shuffle_steals is not None:
         args.shuffle_steals_random_percent = args.shuffle_steals
@@ -36,6 +37,11 @@ def process(args):
         args.parser.print_usage()
         print(f"{sys.argv[0]}: error: steals: shuffle drops and steals flag should not be used with the shuffle drops or shuffle steals flags")
         sys.exit(1)
+
+    if args.shuffle_steals_drops is not None:
+        args.shuffle_steals = True
+        args.shuffle_drops = True
+
     pass
 
 def flags(args):
@@ -47,10 +53,11 @@ def flags(args):
         flags += " -sca"
     if args.shuffle_steals_drops:
         flags += f" -ssd {args.shuffle_steals_drops_random_percent}"
-    if args.shuffle_steals:
-        flags += f" -ss {args.shuffle_steals_random_percent}"
-    if args.shuffle_drops:
-        flags += f" -sd {args.shuffle_drops_random_percent}"
+    else:
+        if args.shuffle_steals:
+            flags += f" -ss {args.shuffle_steals_random_percent}"
+        if args.shuffle_drops:
+            flags += f" -sd {args.shuffle_drops_random_percent}"
 
     return flags
 
@@ -65,13 +72,17 @@ def options(args):
 
     result.append(("Chances", steal_chances, "steal_chances"))
 
-    result.append(("Shuffle Steals", args.shuffle_steals, "shuffle_steals"))
     if args.shuffle_steals_drops:
-        result.append(("Random Percent", f"{args.shuffle_steals_random_percent}%", "shuffle_steals_random_percent"))
+        result.append(("Shuffle", args.shuffle_steals_drops, "shuffle_steals_drops"))
+        result.append(("Random Percent", f"{args.shuffle_steals_random_percent}%", "shuffle_steals_drops_random_percent"))
+    else:
+        result.append(("Shuffle Steals", args.shuffle_steals, "shuffle_steals"))
+        if args.shuffle_steals:
+            result.append(("Random Percent", f"{args.shuffle_steals_random_percent}%", "shuffle_steals_random_percent"))
 
-    result.append(("Shuffle Drops", args.shuffle_drops, "shuffle_drops"))
-    if args.shuffle_steals_drops:
-        result.append(("Random Percent", f"{args.shuffle_drops_random_percent}%", "shuffle_drops_random_percent"))
+        result.append(("Shuffle Drops", args.shuffle_drops, "shuffle_drops"))
+        if args.shuffle_drops:
+            result.append(("Random Percent", f"{args.shuffle_drops_random_percent}%", "shuffle_drops_random_percent"))
     return result
 
 def menu(args):
