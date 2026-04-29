@@ -25,21 +25,26 @@ def parse(parser):
     starting_gold_items.add_argument("-si", "--start-items", default = None, type = str, help = "Start game with items.")
 
 def process(args):
-    class Item:
-        def __init__(self, _id, count):
-            self.id = _id
-            self.count = count
+    from constants.items import name_id
+    class StartingItem:
+        def __init__(self, _nid, min, max):
+            if isinstance(_nid, str):
+                   self.id = name_id[_nid]
+            else:
+                   self.id = _nid
+            self.min = min
+            self.max = max
     args.start_items_list = []
 
     # convert old starting item flags to -si type values
     if args.start_moogle_charms != 0:
-        args.start_items_list.append(Item(222, args.start_moogle_charms))
+        args.start_items_list.append(StartingItem(222, args.start_moogle_charms, args.start_moogle_charms))
     if args.start_sprint_shoes != 0:
-        args.start_items_list.append(Item(230, args.start_sprint_shoes))
+        args.start_items_list.append(StartingItem(230, args.start_sprint_shoes, args.start_sprint_shoes))
     if args.start_warp_stones != 0:
-        args.start_items_list.append(Item(253, args.start_warp_stones))
+        args.start_items_list.append(StartingItem(253, args.start_warp_stones, args.start_warp_stones))
     if args.start_fenix_downs != 0:
-        args.start_items_list.append(Item(240, args.start_fenix_downs))
+        args.start_items_list.append(StartingItem(240, args.start_fenix_downs, args.start_fenix_downs))
 
     if args.start_items != None:
         values = args.start_items.split(".")
@@ -94,13 +99,11 @@ def process(args):
             if max < min:
                 import sys
                 args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: max:'{max}' must be greater than the min:'{min}'")
+                print(f"{sys.argv[0]}: error: start-items: max:'{max}' must be greater than or equal to the min:'{min}'")
 
-            item_count = random.sample(range(min, max + 1), 1)[0]
-            if item_count > 0:
-                item = Item(item_id, item_count)
-                args.start_items_list.append(item)
-                total_item_commands += 1
+            item = StartingItem(item_id, min, max)
+            args.start_items_list.append(item)
+            total_item_commands += 1
         if total_item_commands > 30 :
             import sys
             args.parser.print_usage()
@@ -146,7 +149,7 @@ def options(args):
         if not item_name.endswith("s"):
             item_name = item_name + "s"
         opts += [
-            (f"Start {item_name}", item.count, "start_items")
+            (f"Start {item_name}", f"{item.min}-{item.max}", "start_items")
         ]
 
     return opts
