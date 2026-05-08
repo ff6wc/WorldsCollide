@@ -100,6 +100,7 @@ def process(args):
                 import sys
                 args.parser.print_usage()
                 print(f"{sys.argv[0]}: error: start-items: max:'{max}' must be greater than or equal to the min:'{min}'")
+                sys.exit(1)
 
             item = StartingItem(item_id, min, max)
             args.start_items_list.append(item)
@@ -146,10 +147,13 @@ def options(args):
     for item in args.start_items_list:
         from constants.items import id_name
         item_name = id_name[item.id]
+        min = item.min
+        if min < 0:
+            min = 0
         if not item_name.endswith("s"):
             item_name = item_name + "s"
         opts += [
-            (f"Start {item_name}", f"{item.min}-{item.max}", "start_items")
+            (f"Start {item_name}", f"{min}-{item.max}", "start_items")
         ]
 
     return opts

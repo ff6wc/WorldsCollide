@@ -211,6 +211,8 @@ class Start(Event):
 
         for item in self.args.start_items_list:
             item_count = random.sample(range(item.min, item.max+1), 1)
+            if item_count[0] < 0:
+                item_count[0] = 0
             src += [
                 field.AddItems(item.id, item_count, sound_effect = False),
             ]
