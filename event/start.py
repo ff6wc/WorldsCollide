@@ -215,7 +215,7 @@ class Start(Event):
                 continue
 
             src += [
-                field.AddItems(item.id, item_count, sound_effect = False),
+                field.AddItems(item.id, item_count[0], sound_effect = False),
             ]
 
         if self.args.debug:
