@@ -22,7 +22,7 @@ def parse(parser):
                                      help = "Start game with %(metavar)s different random tools"),
     starting_gold_items.add_argument("-sj", "--start-junk", default = 0, type = int, choices = range(25), metavar = "COUNT",
                                      help = "Start game with %(metavar)s unique low tier items. Includes weapons, armors, helmets, shields, and relics"),
-    starting_gold_items.add_argument("-si", "--start-items", default = None, type = str, help = "Start game with items.")
+    starting_gold_items.add_argument("-si", "--start-items", default = None, type = str, help = "Start the game with items.")
 
 def process(args):
     from constants.items import name_id
@@ -105,10 +105,10 @@ def process(args):
             item = StartingItem(item_id, min, max)
             args.start_items_list.append(item)
             total_item_commands += 1
-        if total_item_commands > 30 :
+        if total_item_commands > 100 :
             import sys
             args.parser.print_usage()
-            print(f"{sys.argv[0]}: error: start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 30 are supported")
+            print(f"{sys.argv[0]}: error: start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 100 are supported")
             sys.exit(1)
 
 def flags(args):
