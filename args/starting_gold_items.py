@@ -105,10 +105,10 @@ def process(args):
             item = StartingItem(item_id, min, max)
             args.start_items_list.append(item)
             total_item_commands += 1
-        if total_item_commands > 100 :
+        if total_item_commands > 30 :
             import sys
             args.parser.print_usage()
-            print(f"{sys.argv[0]}: error: start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 100 are supported")
+            print(f"{sys.argv[0]}: error: start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 30 are supported")
             sys.exit(1)
 
 def flags(args):
