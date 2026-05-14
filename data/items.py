@@ -198,6 +198,25 @@ class Items():
     def expensive_super_balls(self):
         self.items[name_id["Super Ball"]].scale_price(2)
 
+    def expensive_restorative_items(self):
+        self.items[name_id["Fenix Down"]].scale_price(3)
+        self.items[name_id["Tonic"]].scale_price(3)
+        self.items[name_id["Dried Meat"]].scale_price(3)
+        self.items[name_id["Potion"]].scale_price(3)
+        self.items[name_id["X-Potion"]].scale_price(2)
+        self.items[name_id["Tincture"]].scale_price(3)
+        self.items[name_id["Ether"]].scale_price(3)
+        self.items[name_id["X-Ether"]].scale_price(2)
+        self.items[name_id["Sleeping Bag"]].scale_price(3)
+        self.items[name_id["Tent"]].scale_price(3)
+        self.items[name_id["Remedy"]].scale_price(3)
+        self.items[name_id["Antidote"]].scale_price(3)
+        self.items[name_id["Eyedrop"]].scale_price(3)
+        self.items[name_id["Echo Screen"]].scale_price(3)
+        self.items[name_id["Soft"]].scale_price(3)
+        self.items[name_id["Revivify"]].scale_price(3)
+        self.items[name_id["Green Cherry"]].scale_price(3)
+
     def assign_values(self):
         from data.item_custom_values import custom_values
         for item in self.items:
@@ -260,6 +279,9 @@ class Items():
 
         if self.args.shops_expensive_super_balls:
             self.expensive_super_balls()
+
+        if self.args.shops_expensive_restorative_items:
+            self.expensive_restorative_items()
 
         if self.args.shop_prices_random_value:
             self.random_prices_value()
