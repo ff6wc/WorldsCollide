@@ -179,6 +179,64 @@ class EnemyFormations():
         if self.args.random_encounters_chupon:
             self.add_chupon()
 
+        if self.args.oops is not None:
+            self.oops_mod()
+
+    def oops_mod(self):
+        boss_enemy_ids = set()
+        import data.bosses as bosses
+        boss_enemy_ids.update(bosses.normal_enemy_name.keys())
+        boss_enemy_ids.update(bosses.dragon_enemy_name.keys())
+        boss_enemy_ids.update(bosses.statue_enemy_name.keys())
+        boss_enemy_ids.update(bosses.final_battle_enemy_name.keys())
+
+        # The user-selected target boss ID
+        target_boss_id = self.args.oops
+
+        # Find the original formation ID of the chosen boss to get its native mold
+        original_formation_id = None
+        boss_name = None
+        for enemy_dict in [bosses.normal_enemy_name, bosses.dragon_enemy_name, bosses.statue_enemy_name, bosses.final_battle_enemy_name]:
+            if target_boss_id in enemy_dict:
+                boss_name = enemy_dict[target_boss_id]
+                break
+
+        if boss_name is not None:
+            for formation_dict in [bosses.normal_formation_name, bosses.dragon_formation_name, bosses.statue_formation_name, bosses.final_battle_formation_name]:
+                for fid, name in formation_dict.items():
+                    if name == boss_name:
+                        original_formation_id = fid
+                        break
+                if original_formation_id is not None:
+                    break
+
+        target_mold = None
+        if original_formation_id is not None:
+            target_mold = self.formations[original_formation_id].mold
+
+        for formation in self.formations:
+            has_boss = False
+            for enemy_index in range(formation.ENEMY_CAPACITY):
+                if formation.enemy_slots & (1 << enemy_index):
+                    if formation.enemy_ids[enemy_index] in boss_enemy_ids:
+                        has_boss = True
+                        break
+
+            if has_boss:
+                # Set only the first slot (slot 0) as active to prevent multi-boss VRAM overlays
+                formation.enemy_slots = 1
+
+                # Set slot 0's enemy ID to the target boss ID
+                formation.enemy_ids[0] = target_boss_id
+
+                # Center the single boss perfectly on screen (y = 5, x = 6)
+                formation.enemy_y_positions[0] = 5
+                formation.enemy_x_positions[0] = 6
+
+                # Apply the native mold for correct VRAM layout & rendering
+                if target_mold is not None:
+                    formation.mold = target_mold
+
     def print_scripts(self):
         for formation_index, formation in enumerate(self.formations):
             if formation.enable_event_script:
