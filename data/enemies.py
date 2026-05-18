@@ -442,151 +442,93 @@ class Enemies():
         self.who_there_assembly()
 
     def who_there_assembly(self):
-        from memory.space import Allocate, Reserve, Bank
+        from memory.space import Bank, Write
         import instruction.asm as asm
 
         # 1. Allocate a 1-byte flag in ROM representing if the flag is active (it will be 1)
-        who_there_flag_space = Allocate(Bank.F0, 1, "who's there flag")
-        who_there_flag_space.write([1])
+        who_there_flag_space = Write(Bank.F0, [1], "who's there flag")
+        flag_addr = who_there_flag_space.start_address_snes
 
         # 2. Construct the 384-byte boss table
         boss_table_bytes = [0] * 384
         for enemy_id in bosses.enemy_name:
             if 0 <= enemy_id < 384:
                 boss_table_bytes[enemy_id] = 1
-        
-        # Include SrBehemoth (Undead) Phase 2
-        boss_table_bytes[282] = 1
-        
-        # Exclude Final Battle Tiers
-        for excluded_id in range(343, 352):
+        boss_table_bytes[282] = 1 # Include SrBehemoth (Undead) Phase 2
+        for excluded_id in range(343, 352): # Exclude Final Battle Tiers
             boss_table_bytes[excluded_id] = 0
         
-        boss_table_space = Allocate(Bank.F0, 384, "who's there boss table")
-        boss_table_space.write(boss_table_bytes)
-
-        # 3. Create the custom check_imp_graphics subroutine in Bank F0
-        # Write custom assembly code in C0 to check the flag and table
-        subroutine_space = Allocate(Bank.C0, 120, "who's there check imp graphics")
-        sub_addr = subroutine_space.start_address_snes
-
-        subroutine_bytes = []
-
-        # PHX (0xDA)
-        subroutine_bytes.append(0xda)
-        # TDC (0x7B) - Clear 16-bit Accumulator
-        subroutine_bytes.append(0x7b)
-
-        # LDA $81A7 (0xAD, 0xA7, 0x81)
-        subroutine_bytes.extend([0xad, 0xa7, 0x81])
-        # TAY (0xA8)
-        subroutine_bytes.append(0xa8)
-        # LDA $62C2,Y (0xB9, 0xC2, 0x62)
-        subroutine_bytes.extend([0xb9, 0xc2, 0x62])
-        # BNE .is_imp (offset 0x30)
-        subroutine_bytes.extend([0xd0, 0x30])
-
-        # LDA $81A7 (0xAD, 0xA7, 0x81)
-        subroutine_bytes.extend([0xad, 0xa7, 0x81])
-        # ASL A (0x0A)
-        subroutine_bytes.append(0x0a)
-        # TAX (0xAA)
-        subroutine_bytes.append(0xaa)
-
-        # REP #$20 (0xC2, 0x20)
-        subroutine_bytes.extend([0xc2, 0x20])
-        # LDA $2001,X (0xBD, 0x01, 0x20)
-        subroutine_bytes.extend([0xbd, 0x01, 0x20])
-        # CMP #384 (0xC9, 0x80, 0x01)
-        subroutine_bytes.extend([0xc9, 0x80, 0x01])
-        # BCS .not_imp_16 (offset 0x17)
-        subroutine_bytes.extend([0xb0, 0x17])
-        # TAX (0xAA)
-        subroutine_bytes.append(0xaa)
-        # SEP #$20 (0xE2, 0x20)
-        subroutine_bytes.extend([0xe2, 0x20])
-
-        # LDA long who_there_flag (0xAF)
-        flag_addr = who_there_flag_space.start_address_snes
-        subroutine_bytes.extend([0xaf, flag_addr & 0xff, (flag_addr >> 8) & 0xff, (flag_addr >> 16) & 0xff])
-        # BEQ .not_imp (offset 0x06)
-        subroutine_bytes.extend([0xf0, 0x06])
-
-        # LDA long boss_table,X (0xBF)
+        boss_table_space = Write(Bank.F0, boss_table_bytes, "who's there boss table")
         table_addr = boss_table_space.start_address_snes
-        subroutine_bytes.extend([0xbf, table_addr & 0xff, (table_addr >> 8) & 0xff, (table_addr >> 16) & 0xff])
-        # BNE .is_imp (offset 0x12)
-        subroutine_bytes.extend([0xd0, 0x12])
 
-        # .not_imp:
-        # PLX (0xFA)
-        subroutine_bytes.append(0xfa)
-        # LDA $81A7 (0xAD, 0xA7, 0x81)
-        subroutine_bytes.extend([0xad, 0xa7, 0x81])
-        # TAY (0xA8)
-        subroutine_bytes.append(0xa8)
-        # LDA #$00 (0xA9, 0x00)
-        subroutine_bytes.extend([0xa9, 0x00])
-        # RTL (0x6B)
-        subroutine_bytes.append(0x6b)
+        # 3. Create the custom check_imp_graphics subroutine in Bank C0
+        src = [
+            asm.PHX(),
+            asm.TDC(),
+            asm.LDA(0x81A7, asm.ABS),
+            asm.TAY(),
+            asm.LDA(0x62C2, asm.ABS_Y),
+            asm.BNE("IS_IMP"),
 
-        # .not_imp_16:
-        # SEP #$20 (0xE2, 0x20)
-        subroutine_bytes.extend([0xe2, 0x20])
-        # PLX (0xFA)
-        subroutine_bytes.append(0xfa)
-        # LDA $81A7 (0xAD, 0xA7, 0x81)
-        subroutine_bytes.extend([0xad, 0xa7, 0x81])
-        # TAY (0xA8)
-        subroutine_bytes.append(0xa8)
-        # LDA #$00 (0xA9, 0x00)
-        subroutine_bytes.extend([0xa9, 0x00])
-        # RTL (0x6B)
-        subroutine_bytes.append(0x6b)
+            asm.LDA(0x81A7, asm.ABS),
+            asm.ASL(),
+            asm.TAX(),
 
-        # .is_imp:
-        # LDA $81A7 (0xAD, 0xA7, 0x81)
-        subroutine_bytes.extend([0xad, 0xa7, 0x81])
-        # ASL A (0x0A)
-        subroutine_bytes.append(0x0a)
-        # TAX (0xAA)
-        subroutine_bytes.append(0xaa)
-        # REP #$20 (0xC2, 0x20)
-        subroutine_bytes.extend([0xc2, 0x20])
-        # LDA #$0000 (0xA9, 0x00, 0x00)
-        subroutine_bytes.extend([0xa9, 0x00, 0x00])
-        # STA $812F,X (0x9D, 0x2F, 0x81)
-        subroutine_bytes.extend([0x9d, 0x2f, 0x81])
-        # SEP #$20 (0xE2, 0x20)
-        subroutine_bytes.extend([0xe2, 0x20])
+            asm.A16(),
+            asm.LDA(0x812F, asm.ABS_X), # Use 812F as per documentation in agents.md
+            asm.CMP(384, asm.IMM16),
+            asm.BCS("NOT_IMP_16"),
+            asm.TAX(),
+            asm.A8(),
 
-        # PLX (0xFA)
-        subroutine_bytes.append(0xfa)
-        # LDA $81A7 (0xAD, 0xA7, 0x81)
-        subroutine_bytes.extend([0xad, 0xa7, 0x81])
-        # TAY (0xA8)
-        subroutine_bytes.append(0xa8)
-        # LDA #$01 (0xA9, 0x01)
-        subroutine_bytes.extend([0xa9, 0x01])
-        # RTL (0x6B)
-        subroutine_bytes.append(0x6b)
+            asm.LDA(flag_addr, asm.LNG),
+            asm.BEQ("NOT_IMP"),
 
-        subroutine_space.write(subroutine_bytes)
+            asm.LDA(table_addr, asm.LNG_X),
+            asm.BNE("IS_IMP"),
+
+            "NOT_IMP",
+            asm.PLX(),
+            asm.LDA(0x81A7, asm.ABS),
+            asm.TAY(),
+            asm.LDA(0x00, asm.IMM8),
+            asm.RTL(),
+
+            "NOT_IMP_16",
+            asm.A8(),
+            asm.PLX(),
+            asm.LDA(0x81A7, asm.ABS),
+            asm.TAY(),
+            asm.LDA(0x00, asm.IMM8),
+            asm.RTL(),
+
+            "IS_IMP",
+            asm.LDA(0x81A7, asm.ABS),
+            asm.ASL(),
+            asm.TAX(),
+            asm.A16(),
+            asm.LDA(0x0000, asm.IMM16),
+            asm.STA(0x812F, asm.ABS_X),
+            asm.A8(),
+
+            asm.PLX(),
+            asm.LDA(0x81A7, asm.ABS),
+            asm.TAY(),
+            asm.LDA(0x01, asm.IMM8),
+            asm.RTL(),
+        ]
+        subroutine_space = Write(Bank.C0, src, "who's there check imp graphics")
+        sub_addr = subroutine_space.start_address_snes
 
         # 4. Patch the original graphics loader at ROM offset 0x01207B (Bank C1)
-        # We replace 9 bytes from 0x01207B to 0x012083 with:
-        # JSL check_imp_graphics (4 bytes)
-        # BEQ $09 (2 bytes)
-        # NOP (3 bytes)
-        patch_space = Reserve(0x01207b, 0x012083, "who's there imp graphics loader hook", asm.NOP())
-        
-        sub_addr = subroutine_space.start_address_snes
-        patch_bytes = [
-            0x22, sub_addr & 0xff, (sub_addr >> 8) & 0xff, (sub_addr >> 16) & 0xff, # JSL check_imp_graphics
-            0xf0, 0x09,                                                            # BEQ $09 (to 0x01208A)
-            0xea, 0xea, 0xea                                                       # NOPs
+        patch_src = [
+            asm.JSL(sub_addr),
+            asm.BEQ(0x09), # Branch to 0x01208A
+            asm.NOP(),
+            asm.NOP(),
+            asm.NOP(),
         ]
-        patch_space.write(patch_bytes)
+        Write(0x01207b, patch_src, "who's there imp graphics loader hook")
 
     def get_event_boss(self, original_boss_name):
         return self.packs.get_event_boss_replacement(original_boss_name)
