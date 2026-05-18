@@ -424,12 +424,161 @@ class Enemies():
         self.zones.mod()
         self.scripts.mod()
 
+        if self.args.who_there:
+            self.who_there_mod()
+
         if self.args.scan_all:
             self.scan_all()
 
         if self.args.debug:
             for enemy in self.enemies:
                 enemy.debug_mod()
+
+    def who_there_mod(self):
+        for enemy in self.enemies:
+            if enemy.id in bosses.enemy_name:
+                enemy.name = "??????"
+        self.who_there_assembly()
+
+    def who_there_assembly(self):
+        from memory.space import Allocate, Reserve, Bank
+        import instruction.asm as asm
+
+        # 1. Allocate a 1-byte flag in ROM representing if the flag is active (it will be 1)
+        who_there_flag_space = Allocate(Bank.F0, 1, "who's there flag")
+        who_there_flag_space.write([1])
+
+        # 2. Construct the 384-byte boss table
+        boss_table_bytes = [0] * 384
+        for enemy_id in bosses.enemy_name:
+            if 0 <= enemy_id < 384:
+                boss_table_bytes[enemy_id] = 1
+        
+        boss_table_space = Allocate(Bank.F0, 384, "who's there boss table")
+        boss_table_space.write(boss_table_bytes)
+
+        # 3. Create the custom check_imp_graphics subroutine in Bank F0
+        # Write custom assembly code in C0 to check the flag and table
+        subroutine_space = Allocate(Bank.C0, 120, "who's there check imp graphics")
+        sub_addr = subroutine_space.start_address_snes
+
+        subroutine_bytes = []
+
+        # PHX (0xDA)
+        subroutine_bytes.append(0xda)
+        # TDC (0x7B) - Clear 16-bit Accumulator
+        subroutine_bytes.append(0x7b)
+
+        # LDA $81A7 (0xAD, 0xA7, 0x81)
+        subroutine_bytes.extend([0xad, 0xa7, 0x81])
+        # TAY (0xA8)
+        subroutine_bytes.append(0xa8)
+        # LDA $62C2,Y (0xB9, 0xC2, 0x62)
+        subroutine_bytes.extend([0xb9, 0xc2, 0x62])
+        # BNE .is_imp (offset 0x30)
+        subroutine_bytes.extend([0xd0, 0x30])
+
+        # LDA $81A7 (0xAD, 0xA7, 0x81)
+        subroutine_bytes.extend([0xad, 0xa7, 0x81])
+        # ASL A (0x0A)
+        subroutine_bytes.append(0x0a)
+        # TAX (0xAA)
+        subroutine_bytes.append(0xaa)
+
+        # REP #$20 (0xC2, 0x20)
+        subroutine_bytes.extend([0xc2, 0x20])
+        # LDA $2001,X (0xBD, 0x01, 0x20)
+        subroutine_bytes.extend([0xbd, 0x01, 0x20])
+        # CMP #384 (0xC9, 0x80, 0x01)
+        subroutine_bytes.extend([0xc9, 0x80, 0x01])
+        # BCS .not_imp_16 (offset 0x17)
+        subroutine_bytes.extend([0xb0, 0x17])
+        # TAX (0xAA)
+        subroutine_bytes.append(0xaa)
+        # SEP #$20 (0xE2, 0x20)
+        subroutine_bytes.extend([0xe2, 0x20])
+
+        # LDA long who_there_flag (0xAF)
+        flag_addr = who_there_flag_space.start_address_snes
+        subroutine_bytes.extend([0xaf, flag_addr & 0xff, (flag_addr >> 8) & 0xff, (flag_addr >> 16) & 0xff])
+        # BEQ .not_imp (offset 0x06)
+        subroutine_bytes.extend([0xf0, 0x06])
+
+        # LDA long boss_table,X (0xBF)
+        table_addr = boss_table_space.start_address_snes
+        subroutine_bytes.extend([0xbf, table_addr & 0xff, (table_addr >> 8) & 0xff, (table_addr >> 16) & 0xff])
+        # BNE .is_imp (offset 0x12)
+        subroutine_bytes.extend([0xd0, 0x12])
+
+        # .not_imp:
+        # PLX (0xFA)
+        subroutine_bytes.append(0xfa)
+        # LDA $81A7 (0xAD, 0xA7, 0x81)
+        subroutine_bytes.extend([0xad, 0xa7, 0x81])
+        # TAY (0xA8)
+        subroutine_bytes.append(0xa8)
+        # LDA #$00 (0xA9, 0x00)
+        subroutine_bytes.extend([0xa9, 0x00])
+        # RTL (0x6B)
+        subroutine_bytes.append(0x6b)
+
+        # .not_imp_16:
+        # SEP #$20 (0xE2, 0x20)
+        subroutine_bytes.extend([0xe2, 0x20])
+        # PLX (0xFA)
+        subroutine_bytes.append(0xfa)
+        # LDA $81A7 (0xAD, 0xA7, 0x81)
+        subroutine_bytes.extend([0xad, 0xa7, 0x81])
+        # TAY (0xA8)
+        subroutine_bytes.append(0xa8)
+        # LDA #$00 (0xA9, 0x00)
+        subroutine_bytes.extend([0xa9, 0x00])
+        # RTL (0x6B)
+        subroutine_bytes.append(0x6b)
+
+        # .is_imp:
+        # LDA $81A7 (0xAD, 0xA7, 0x81)
+        subroutine_bytes.extend([0xad, 0xa7, 0x81])
+        # ASL A (0x0A)
+        subroutine_bytes.append(0x0a)
+        # TAX (0xAA)
+        subroutine_bytes.append(0xaa)
+        # REP #$20 (0xC2, 0x20)
+        subroutine_bytes.extend([0xc2, 0x20])
+        # LDA #$0000 (0xA9, 0x00, 0x00)
+        subroutine_bytes.extend([0xa9, 0x00, 0x00])
+        # STA $812F,X (0x9D, 0x2F, 0x81)
+        subroutine_bytes.extend([0x9d, 0x2f, 0x81])
+        # SEP #$20 (0xE2, 0x20)
+        subroutine_bytes.extend([0xe2, 0x20])
+
+        # PLX (0xFA)
+        subroutine_bytes.append(0xfa)
+        # LDA $81A7 (0xAD, 0xA7, 0x81)
+        subroutine_bytes.extend([0xad, 0xa7, 0x81])
+        # TAY (0xA8)
+        subroutine_bytes.append(0xa8)
+        # LDA #$01 (0xA9, 0x01)
+        subroutine_bytes.extend([0xa9, 0x01])
+        # RTL (0x6B)
+        subroutine_bytes.append(0x6b)
+
+        subroutine_space.write(subroutine_bytes)
+
+        # 4. Patch the original graphics loader at ROM offset 0x01207B (Bank C1)
+        # We replace 9 bytes from 0x01207B to 0x012083 with:
+        # JSL check_imp_graphics (4 bytes)
+        # BEQ $09 (2 bytes)
+        # NOP (3 bytes)
+        patch_space = Reserve(0x01207b, 0x012083, "who's there imp graphics loader hook", asm.NOP())
+        
+        sub_addr = subroutine_space.start_address_snes
+        patch_bytes = [
+            0x22, sub_addr & 0xff, (sub_addr >> 8) & 0xff, (sub_addr >> 16) & 0xff, # JSL check_imp_graphics
+            0xf0, 0x09,                                                            # BEQ $09 (to 0x01208A)
+            0xea, 0xea, 0xea                                                       # NOPs
+        ]
+        patch_space.write(patch_bytes)
 
     def get_event_boss(self, original_boss_name):
         return self.packs.get_event_boss_replacement(original_boss_name)

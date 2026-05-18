@@ -22,6 +22,9 @@ def parse(parser):
     graphics.add_argument("-ahtc", "--alternate-healing-text-color", action = "store_true",
                               help = "Makes healing text blue, to be able to distinguish from damage.")
 
+    graphics.add_argument("-who", "--who-there", action = "store_true",
+                              help = "Who's There? Bosses look like Imps and have the name '??????'")
+
 def process(args):
     import graphics.palettes.palettes as palettes
     import graphics.portraits.portraits as portraits
@@ -118,6 +121,8 @@ def flags(args):
         flags += " -wmhc"
     if args.alternate_healing_text_color:
         flags += " -ahtc"
+    if args.who_there:
+        flags += " -who"
 
     return flags
 
@@ -187,10 +192,15 @@ def _other_options_log(args):
     if args.alternate_healing_text_color:
         healing_text = "Blue"
 
+    who_there = "Original"
+    if args.who_there:
+        who_there = "Imps"
+
     entries = [
         ("Remove Flashes", remove_flashes, "remove_flashes"),
         ("World Minimap", world_minimap, "world_minimap"),
         ("Healing Text", healing_text, "healing_text"),
+        ("Who's There?", who_there, "who_there"),
     ]
 
     for entry in entries:
