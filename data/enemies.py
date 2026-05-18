@@ -436,8 +436,9 @@ class Enemies():
 
     def who_there_mod(self):
         for enemy in self.enemies:
-            if enemy.id in bosses.enemy_name:
-                enemy.name = "??????"
+            if enemy.id in bosses.enemy_name or enemy.id == 282: # 282 is Undead SrBehemoth
+                if enemy.id not in range(343, 352): # Exclude Final Battle Tiers (Short Arm -> Sleep)
+                    enemy.name = "??????"
         self.who_there_assembly()
 
     def who_there_assembly(self):
@@ -453,6 +454,13 @@ class Enemies():
         for enemy_id in bosses.enemy_name:
             if 0 <= enemy_id < 384:
                 boss_table_bytes[enemy_id] = 1
+        
+        # Include SrBehemoth (Undead) Phase 2
+        boss_table_bytes[282] = 1
+        
+        # Exclude Final Battle Tiers
+        for excluded_id in range(343, 352):
+            boss_table_bytes[excluded_id] = 0
         
         boss_table_space = Allocate(Bank.F0, 384, "who's there boss table")
         boss_table_space.write(boss_table_bytes)
