@@ -41,12 +41,12 @@ def flags(args):
     if args.coliseum_opponents_random:
         flags += f" -cor {args.coliseum_opponents_random}"
     elif args.coliseum_opponents_shuffle_random:
-        flags += f" -cor {args.coliseum_opponents_shuffle_random}"
+        flags += f" -cosr {args.coliseum_opponents_shuffle_random}"
 
     if args.coliseum_rewards_random:
         flags += f" -crr {args.coliseum_rewards_random}"
     elif args.coliseum_rewards_shuffle_random:
-        flags += f" -crr {args.coliseum_rewards_shuffle_random}"
+        flags += f" -crsr {args.coliseum_rewards_shuffle_random}"
 
     if args.coliseum_rewards_visible_random:
         flags += f" -crvr {args.coliseum_rewards_visible_random_min} {args.coliseum_rewards_visible_random_max}"
@@ -64,28 +64,45 @@ def flags(args):
 def options(args):
     result = []
 
-    opponents = "Original"
+    # if Coliseum opponents are random
     if args.coliseum_opponents_random:
-        opponents = "Random"
+        result.append(("Opponents", "Random", "opponents"))
+        result.append(("  Random", f"{args.coliseum_opponents_random}%","coliseum_opponents_random"))
+    # if Coliseum opponents are shuffle + random
+    elif args.coliseum_opponents_shuffle_random:
+        result.append(("Opponents", "Random", "opponents"))
+        result.append(("  Shuffle + Random", f"{args.coliseum_opponents_shuffle_random}%","coliseum_opponents_shuffle_random"))
+    # else Coliseum opponents are Original
+    else:
+        result.append(("Opponents", "Original", "opponents"))
 
-    rewards = "Original"
+    # if Coliseum rewards are random
     if args.coliseum_rewards_random:
-        rewards = "Random"
+        result.append(("Rewards", "Random", "rewards"))
+        result.append(("  Random", f"{args.coliseum_rewards_random}%","coliseum_rewards_random"))
+    # if Coliseum opponents are shuffle + random
+    elif args.coliseum_rewards_shuffle_random:
+        result.append(("Rewards", "Random", "rewards"))
+        result.append(("  Shuffle + Random", f"{args.coliseum_rewards_shuffle_random}%","coliseum_rewards_shuffle_random"))
+    # else Coliseum opponents are Original
+    else:
+        result.append(("Rewards", "Original", "rewards"))
 
+    # process rewards menu options
     rewards_visible = "Original"
     if not args.coliseum_rewards_menu:
         rewards_visible = "F"
     else:
         if args.coliseum_rewards_visible_random:
             rewards_visible = f"{args.coliseum_rewards_visible_random_min}-{args.coliseum_rewards_visible_random_max}"
+    # update Coliseum menu display
+    result.append(("Rewards Visible", rewards_visible, "rewards_visible"))
+    # update Coliseum Exp Eggs display
+    result.append(("No Exp. Eggs", args.coliseum_no_exp_eggs, "coliseum_no_exp_eggs"))
+    # update Coliseum Illuminas display
+    result.append(("No Illuminas", args.coliseum_no_illuminas, "coliseum_no_illuminas"))
 
-    return [
-        ("Opponents", opponents, "opponents"),
-        ("Rewards", rewards, "rewards"),
-        ("Rewards Visible", rewards_visible, "rewards_visible"),
-        ("No Exp. Eggs", args.coliseum_no_exp_eggs, "coliseum_no_exp_eggs"),
-        ("No Illuminas", args.coliseum_no_illuminas, "coliseum_no_illuminas"),
-    ]
+    return result
 
 def menu(args):
     return (name(), options(args))

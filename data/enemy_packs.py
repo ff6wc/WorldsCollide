@@ -150,9 +150,11 @@ class EnemyPacks():
         from constants.objectives.conditions import names as possible_condition_names
 
         boss_condition_name = "Boss"
+        bosses_condition_name = "Bosses"
         dragon_condition_name = "Dragon"
         dragons_condition_name = "Dragons"
         assert boss_condition_name in possible_condition_names
+        assert bosses_condition_name in possible_condition_names
         assert dragon_condition_name in possible_condition_names
         assert dragons_condition_name in possible_condition_names
 
@@ -160,6 +162,7 @@ class EnemyPacks():
         required_dragon_formations = set()
         required_statue_formations = set()
 
+        min_boss_formations = 0
         min_dragon_formations = 0
         for objective in objectives:
             for condition in objective.conditions:
@@ -169,15 +172,41 @@ class EnemyPacks():
                         required_statue_formations.add(formation)
                     else:
                         required_boss_formations.add(formation)
+                # if this condition is a set number of bosses, make sure we always get the highest amount for the minimum req # of formations
+                elif condition.NAME == bosses_condition_name and condition.count > min_boss_formations:
+                    min_boss_formations = condition.count
                 elif condition.NAME == dragon_condition_name:
                     required_dragon_formations.add(condition.dragon_formation)
                 elif condition.NAME == dragons_condition_name and condition.count > min_dragon_formations:
                     min_dragon_formations = condition.count
 
+        # amount of bosses needed is the minimum from above minus the required bosses + required statues
+        boss_formations_needed = min_boss_formations - (len(required_boss_formations) + len(required_statue_formations))
+        # if the extra required number needed non-zero
+        if boss_formations_needed > 0:
+            # initialize all boss formations set
+            all_boss_formations = set(bosses.normal_formation_name)
+            # remaining bosses is all bosses - required bosses | required statues
+            required_formations = set(required_boss_formations | required_statue_formations)
+            remaining_boss_formations = sorted(all_boss_formations - required_formations)
+            # the random boss formation list is a sample of the remaining bosses for the amount needed to fulfill objectives
+            random_boss_formations = random.sample(remaining_boss_formations, boss_formations_needed)
+            # add these boss formations into the appropriate set 
+            # (required_boss_formations or required_statue_formations)
+            for formation_id in random_boss_formations:
+                # if this formation is a statue
+                if formation_id in bosses.statue_formation_name:
+                    # add to required statue formations
+                    required_statue_formations.add(formation_id)
+                # else a regular boss
+                else:
+                    # add to required boss formations
+                    required_boss_formations.add(formation_id)
+
         dragon_formations_needed = min_dragon_formations - len(required_dragon_formations)
         if dragon_formations_needed > 0:
             all_dragon_formations = set(bosses.dragon_formation_name)
-            remaining_dragon_formations = list(all_dragon_formations - required_dragon_formations)
+            remaining_dragon_formations = sorted(all_dragon_formations - required_dragon_formations)
             random_dragon_formations = random.sample(remaining_dragon_formations, dragon_formations_needed)
             required_dragon_formations |= set(random_dragon_formations)
 

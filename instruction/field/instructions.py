@@ -129,6 +129,31 @@ def AddItem(item, sound_effect = True):
     else:
         return AddItem(item)
 
+class _AddItems(_Instruction):
+    def __init__(self, item, count):
+        if isinstance(item, str):
+            from data.item_names import name_id
+            self.item = name_id[item]
+            self.item_name = item
+        else:
+            from data.item_names import id_name
+            self.item = item
+            self.item_name = id_name[item]
+        if count == 1:
+            super().__init__(0x80, self.item)
+        else:
+            super().__init__(0xB0, count, 0x80, self.item, 0xB1)
+
+    def __str__(self):
+        return super().__str__(f"'{self.item_name}'")
+
+def AddItems(item, count, sound_effect = True):
+    AddItems = type("AddItems", (_AddItems,), {})
+    if sound_effect:
+        return AddItems(item, count), PlaySoundEffect(141)
+    else:
+        return AddItems(item, count)
+
 class AddGP(_Instruction):
     MAX = 2 ** 16 - 1 # 2 bytes max value
     def __init__(self, amount):

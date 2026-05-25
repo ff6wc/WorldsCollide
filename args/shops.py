@@ -29,7 +29,7 @@ def parse(parser):
     shops_sell_fraction.add_argument("-ssf0", "--shop-sell-fraction0", action = "store_true",
                                      help = "Items sell for zero")
 
-    shops.add_argument("-sdm", "--shop-dried-meat", default = 1, type = int, choices = range(6), metavar = "COUNT",
+    shops.add_argument("-sdm", "--shop-dried-meat", default = 1, type = int, choices = range(11), metavar = "COUNT",
                         help = "%(metavar)s shops will contain dried meat")
     shops.add_argument("-npi", "--no-priceless-items", action = "store_true",
                        help = "Assign values to items which normally sell for 1 gold. Recommended with random inventory")
