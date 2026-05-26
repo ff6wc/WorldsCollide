@@ -56,7 +56,7 @@ class EnemyScripts():
         piranha_script = self.get_script("Piranha")
 
         import random
-        random_time = random.randint(5, 55) # average of 30
+        random_time = random.randint(5, 15) # average of 10
 
         original_time = 60
         if random_time == original_time:
