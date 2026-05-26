@@ -148,6 +148,7 @@ AssertionError
   ```python
   def single_possible_type(self):
       return self.possible_types in (RewardType.CHARACTER, RewardType.ESPER, RewardType.ITEM)
+  ```
 
 ---
 

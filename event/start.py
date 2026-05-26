@@ -210,12 +210,12 @@ class Start(Event):
             ]
 
         for item in self.args.start_items_list:
-            item_count = random.sample(range(item.min, item.max+1), 1)
-            if item_count[0] <= 0:
+            item_count = random.randint(item.min, item.max)
+            if item_count <= 0:
                 continue
 
             src += [
-                field.AddItems(item.id, item_count[0], sound_effect = False),
+                field.AddItems(item.id, item_count, sound_effect = False),
             ]
 
         if self.args.debug:

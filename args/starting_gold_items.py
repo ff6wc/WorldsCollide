@@ -50,66 +50,39 @@ def process(args):
         values = args.start_items.split(".")
         total_item_commands = 0
         if len(values) % 3 != 0:
-            import sys
-            args.parser.print_usage()
-            print(f"{sys.argv[0]}: error: start-items: Invalid number of entries, they must come in groups of 3 'item_id.min.max'")
-            sys.exit(1)
+            args.parser.error("start-items: Invalid number of entries, they must come in groups of 3 'item_id.min.max'")
         for index in range(0, len(values), 3):
             item_id = 0
             try:
                 item_id = int(values[index])
             except:
-                import sys
-                args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index]}'")
-                sys.exit(1)
+                args.parser.error(f"start-items: Failed to convert value into an int '{values[index]}'")
             if item_id < 0 or item_id >= 255:
-                import sys
-                args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: '{item_id}' is an invalid value for an item id. It must be between 0-254")
-                sys.exit(1)
+                args.parser.error(f"start-items: '{item_id}' is an invalid value for an item id. It must be between 0-254")
 
             min = 0
             try:
                 min = int(values[index + 1])
             except:
-                import sys
-                args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index+1]}'")
-                sys.exit(1)
-            if min > 99:
-                import sys
-                args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: '{min}' is an invalid min for an item. It must be less than 99")
-                sys.exit(1)
+                args.parser.error(f"start-items: Failed to convert value into an int '{values[index+1]}'")
+            if min < 0 or min > 99:
+                args.parser.error(f"start-items: '{min}' is an invalid min for an item. It must be between 0 and 99")
 
             max = 0
             try:
                 max = int(values[index + 2])
             except:
-                import sys
-                args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: Failed to convert value into an int '{values[index+2]}'")
-                sys.exit(1)
+                args.parser.error(f"start-items: Failed to convert value into an int '{values[index+2]}'")
             if max <= 0 or max > 99:
-                import sys
-                args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: '{max}' is an invalid count for an item. It must be between 1-99")
-                sys.exit(1)
+                args.parser.error(f"start-items: '{max}' is an invalid count for an item. It must be between 1-99")
             if max < min:
-                import sys
-                args.parser.print_usage()
-                print(f"{sys.argv[0]}: error: start-items: max:'{max}' must be greater than or equal to the min:'{min}'")
-                sys.exit(1)
+                args.parser.error(f"start-items: max:'{max}' must be greater than or equal to the min:'{min}'")
 
             item = StartingItem(item_id, min, max)
             args.start_items_list.append(item)
             total_item_commands += 1
         if total_item_commands > 30 :
-            import sys
-            args.parser.print_usage()
-            print(f"{sys.argv[0]}: error: start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 30 are supported")
-            sys.exit(1)
+            args.parser.error(f"start-items: '{total_item_commands}' Item types are trying to be added in total. Only up to 30 are supported")
 
 def flags(args):
     flags = ""

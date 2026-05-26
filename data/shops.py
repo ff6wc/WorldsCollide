@@ -151,9 +151,9 @@ class Shops():
         no_dried_meat_shops = []
 
         for shop in self.shops:
-            if shop.contains(dried_meat_id) and shop.name() in excluded_shops:
-                shop.remove(dried_meat_id)
-                no_dried_meat_shops.append(shop)
+            if shop.name() in excluded_shops:
+                if shop.contains(dried_meat_id):
+                    shop.remove(dried_meat_id)
             elif shop.contains(dried_meat_id):
                 dried_meat_shops.append(shop)
             elif shop.type == Shop.ITEM or shop.type == Shop.VENDOR:
@@ -171,10 +171,9 @@ class Shops():
             # too few shops have dried meat, choose random shops and
             # add a dried meat if space, otherwise replace a random item with dried meat
             for index in range(number_shops_with_dried_meat, self.args.shop_dried_meat):
+                if not no_dried_meat_shops:
+                    break
                 random_shop = random.choice(no_dried_meat_shops)
-
-                while random_shop.name() in excluded_shops: # keep looping if shop is on the "bad" list
-                    random_shop = random.choice(no_dried_meat_shops)
 
                 if not random_shop.full():
                     random_shop.append(dried_meat_id)
