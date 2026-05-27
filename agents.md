@@ -158,8 +158,8 @@ AssertionError
 **Cause**: Modifying registers (such as `X` or `Y`) or using incorrect data bank instruction opcodes inside custom assembly subroutines. Specifically:
 1. Destructively overwriting `X` inside a hook when the caller context relies on `X` containing the original graphics index.
 2. Using 16-bit absolute address instructions like `LDA absolute,X` (`0xBD`) to access 24-bit dynamic ROM banks (`F0`), which reads from the incorrect data bank and treats the third address byte as the opcode of the next instruction, shifting the entire instruction stream.
-3. Looking up active monster IDs in the wrong table (like general actor list WRAM `$2001,X` where slot indices do not map directly to monster offsets), leading to missing or un-rendered sprite overlays in multi-boss battles.
+3. Looking up active monster IDs from the wrong table or using the wrong index, leading to missing or un-rendered sprite overlays in multi-boss battles.
 **Resolution**:
 - Always preserve and restore modified registers using `PHX`/`PLX` or `PHY`/`PLY` at the boundaries of your subroutine.
 - Use 24-bit long addressing opcodes (`0xAF` for `LDA long`, `0xBF` for `LDA long,X`) when referencing addresses dynamically allocated to Bank `F0`.
-- Always load active monster IDs directly from the active monster ID table WRAM `$812F,Y` (indexed by slot index * 2) after clearing the 16-bit Accumulator (using `TDC` `0x7B`) at the very beginning of the subroutine to avoid index register pollution from caller active CPU registers.
+- Always load active monster IDs directly from the active monster ID table WRAM `$2001,X` (where `X` is `slot_index * 2`) after clearing the 16-bit Accumulator (using `TDC` `0x7B`) to avoid index register pollution. WRAM `$812F,X` is used by the graphics loader to hold the overwritten graphics ID (e.g. setting it to 0 to trigger Imp graphics), and does not hold the actual active monster IDs for lookup.

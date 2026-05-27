@@ -475,7 +475,7 @@ class Enemies():
             asm.TAX(),
 
             asm.A16(),
-            asm.LDA(0x812F, asm.ABS_X), # Use 812F as per documentation in agents.md
+            asm.LDA(0x2001, asm.ABS_X), # Load the active monster ID from WRAM $2001,X
             asm.CMP(384, asm.IMM16),
             asm.BCS("NOT_IMP_16"),
             asm.TAX(),
