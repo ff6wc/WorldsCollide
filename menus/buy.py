@@ -43,6 +43,26 @@ class BuyMenu:
                                 # $66 is on the verified-safe list in ARCHIVE.md
                                 # alongside the other shop-menu scratch bytes.
 
+    # Pack-price-can-exceed-65535 fix.  When unit_price * pack_size overflows
+    # 16 bits, the original price buffer at $7E9F09 (16-bit per slot) can't
+    # hold the full value.  Capping it to $FFFF made the C3/B7E6 affordability
+    # check pass for any player carrying > 65535 GP (it shortcuts to "ample"
+    # whenever the GP high byte is non-zero), letting them open the order
+    # submenu and underflow their GP on confirm.  These bytes hold the full
+    # 24-bit pack price plus a snapshot of the player's GP, used to override
+    # B7E6's shortcut and to render six-digit prices in the list.
+    PACK_PRICE_HIGH_DP = 0x40   # 1 byte: high byte of the 24-bit pack price.
+                                # Reused by hook_buy_setup (after $40 finishes
+                                # its role as the pack-table-index temp) and
+                                # by hook_price_display (transient).
+    GP_LOW_SAVE_DP     = 0x36   # 2 bytes ($36-$37): saved low 16 bits of GP
+                                # ($7E1860-$7E1861) before hook_buy_setup may
+                                # zero them; restored in hook_affordability_restore.
+    GP_HIGH_SAVE_DP    = 0x38   # 1 byte: saved $7E1862 (GP high byte).
+    F1_SAVE_DP         = 0x41   # 1 byte: saved $F1 (buy-list loop counter)
+                                # across the 24-bit number-to-text routine,
+                                # which clobbers $F1-$F3 with the operand.
+
     def __init__(self):
         if args.shop_limited_inventory:
             self.mod()
@@ -51,6 +71,7 @@ class BuyMenu:
         # Write shared resources first
         self._write_get_pack_subroutine()
         self._write_qty_label_text()
+        self._write_draw_num6_subroutine()
 
         # Existing hooks
         self.hook_load_item()
@@ -143,6 +164,27 @@ class BuyMenu:
         space = Write(Bank.C3, [qty_text], "limited inventory: Qty label text data")
         self._qty_text_addr = space.start_address   # ROM address in Bank C3
 
+    def _write_draw_num6_subroutine(self):
+        """Write a 'Draw 6 digits, skipping 2 leading' helper to Bank C3.
+
+        The vanilla shop bank exposes DrawNum2/3/4/5/7/8 (C3/0486-C3/04C0),
+        but no "draw 6 from $F9-$FE" variant — which is exactly the slice we
+        need after C3/0582 produces an 8-digit buffer at $F7-$FE with two
+        leading zeros for any value < 1_000_000.
+
+        Same calling convention as DrawNum5: X = base tilemap position
+        (low 16 bits, bank $7E is hardcoded by DrawNumText).  Falls into the
+        shared loop at C3/04C7 via JMP.
+        """
+        src = [
+            asm.LDY(0x0008, asm.IMM16),     # $E0 = 8 (X end value)
+            asm.STY(0xe0, asm.DIR),
+            asm.LDY(0x0002, asm.IMM16),     # initial Y = 2 (skip $F7, $F8)
+            asm.JMP(0x04c7, asm.ABS),       # DrawNumText shared loop
+        ]
+        space = Write(Bank.C3, src, "limited inventory: DrawNum6 (skip 2)")
+        self._draw_num6_addr = space.start_address   # ROM address in Bank C3
+
     # ------------------------------------------------------------------
     # Hook helpers
     # ------------------------------------------------------------------
@@ -154,6 +196,10 @@ class BuyMenu:
     def _qty_text_addr_local(self):
         """Bank-C3-local (16-bit) address of 'Qty:' text data."""
         return self._qty_text_addr & 0xffff
+
+    def _draw_num6_addr_local(self):
+        """Bank-C3-local (16-bit) address of DrawNum6 subroutine."""
+        return self._draw_num6_addr & 0xffff
 
     # ------------------------------------------------------------------
     # Existing hooks (unchanged)
@@ -208,6 +254,17 @@ class BuyMenu:
         this hook) compares GP against the *total pack price*, not the unit
         price.  The original unit price is saved in $60-$61 so the next hook
         (hook_affordability_restore) can put it back.
+
+        When the inflated pack price overflows the 16-bit price buffer, capping
+        $7E9F09 at $FFFF alone wasn't enough: the B7E6 check shortcuts to
+        "ample" whenever the GP high byte is non-zero ($1862 != 0, i.e. GP
+        > 65535), so a 100,000 GP player could open the order menu on a
+        300,000 GP pack and underflow GP on confirm.  We now compute the full
+        24-bit pack price and, if it exceeds the player's 24-bit GP, snapshot
+        and zero the GP bytes at $7E1860-$7E1862 so B7E6 falls through to the
+        16-bit price-vs-GP compare ($FFFF vs 0 → "not enough GP").  The
+        affordability-restore hook puts GP back regardless of which path B7E6
+        takes (the unaffordable path JMPs to $B87D which RTSs to us).
 
         Entry state: A=8-bit, X=16-bit, Y=16-bit
         $4B = selected cursor slot (display position in buy list)
@@ -314,27 +371,68 @@ class BuyMenu:
             asm.NOP(),
             asm.NOP(),
 
-            # Combine: final_high = R2_low + R1_high
+            # Combine the partial products into a 24-bit value:
+            #   mid = R2_low + R1_high  (carry → high)
+            #   high = R2_high + carry
             asm.CLC(),
-            asm.LDA(0x4216, asm.ABS),           # R2_low
-            asm.ADC(self.PACK_TEMP_DP + 1, asm.DIR),  # + R1_high ($63)
-            asm.BCS("CAP_PRICE"),               # overflow → cap
-            asm.STA(self.PACK_TEMP_DP + 1, asm.DIR),  # $63 = final high byte
-            asm.LDA(0x4217, asm.ABS),           # R2_high
-            asm.BNE("CAP_PRICE"),               # >0 → cap
+            asm.LDA(0x4216, asm.ABS),                       # R2_low
+            asm.ADC(self.PACK_TEMP_DP + 1, asm.DIR),        # + R1_high ($63)
+            asm.STA(self.PACK_TEMP_DP + 1, asm.DIR),        # $63 = mid byte
+            asm.LDA(0x4217, asm.ABS),                       # R2_high
+            asm.ADC(0x00, asm.IMM8),                        # + carry from above
+            asm.STA(self.PACK_PRICE_HIGH_DP, asm.DIR),      # $40 = high byte
+            # Now $62-$63 + $40 form the full 24-bit pack price.
 
-            # Store inflated price: $62 = low, $63 = high
-            asm.REP(0x20),
-            asm.LDA(self.PACK_TEMP_DP, asm.DIR),  # 16-bit result from $62-$63
-            asm.STA(0x7e9f09, asm.LNG_X),
-            asm.SEP(0x20),
-            asm.BRA("DONE"),
-
-            "CAP_PRICE",
+            # Store the low 16 bits into $7E9F09[$4B*2] (capped at $FFFF if
+            # the high byte is non-zero — B7E6 only reads 16 bits and would
+            # see truncated low bits otherwise, which could randomly read as
+            # "affordable").
+            asm.BEQ("STORE_LO16"),                          # high == 0
             asm.REP(0x20),
             asm.LDA(0xffff, asm.IMM16),
             asm.STA(0x7e9f09, asm.LNG_X),
             asm.SEP(0x20),
+            asm.BRA("AFTER_STORE"),
+            "STORE_LO16",
+            asm.REP(0x20),
+            asm.LDA(self.PACK_TEMP_DP, asm.DIR),            # 16-bit ($62-$63)
+            asm.STA(0x7e9f09, asm.LNG_X),
+            asm.SEP(0x20),
+            "AFTER_STORE",
+
+            # ---- Snapshot GP, then zero it iff pack_price > GP ----
+            # Save the player's 24-bit GP so hook_affordability_restore can
+            # put it back after B7E6 returns (whether B7E6 takes the ample
+            # or "not enough GP" path — both wind up RTSing to our wrapper).
+            asm.REP(0x20),
+            asm.LDA(0x7e1860, asm.LNG),                     # GP low+mid
+            asm.STA(self.GP_LOW_SAVE_DP, asm.DIR),          # $36-$37
+            asm.SEP(0x20),
+            asm.LDA(0x7e1862, asm.LNG),                     # GP high byte
+            asm.STA(self.GP_HIGH_SAVE_DP, asm.DIR),         # $38
+
+            # 24-bit subtract: GP - pack_price.
+            # Carry SET after the final SBC ⇒ GP >= pack_price ⇒ ample.
+            # Carry CLEAR ⇒ pack_price > GP ⇒ override B7E6's GP-high
+            # shortcut by zeroing GP for the duration of the check.
+            asm.SEC(),
+            asm.LDA(0x7e1860, asm.LNG),
+            asm.SBC(self.PACK_TEMP_DP, asm.DIR),            # - pack_low ($62)
+            asm.LDA(0x7e1861, asm.LNG),
+            asm.SBC(self.PACK_TEMP_DP + 1, asm.DIR),        # - pack_mid ($63)
+            asm.LDA(0x7e1862, asm.LNG),
+            asm.SBC(self.PACK_PRICE_HIGH_DP, asm.DIR),      # - pack_high ($40)
+            asm.BCS("DONE"),                                # GP >= pack_price
+
+            # pack_price > GP: zero all three GP bytes so the B80A shortcut
+            # (LDA $1862 / BNE ample) falls through to the 16-bit compare,
+            # and the 16-bit compare itself sees $FFFF (capped price) vs $0
+            # → "not enough GP".  (STZ has no LNG form, so we STA #0 via A.)
+            asm.REP(0x20),
+            asm.LDA(0x0000, asm.IMM16),
+            asm.STA(0x7e1860, asm.LNG),
+            asm.SEP(0x20),
+            asm.STA(0x7e1862, asm.LNG),                     # A is now 0 (low byte)
 
             "DONE",
             asm.PLX(),
@@ -465,12 +563,29 @@ class BuyMenu:
     # ------------------------------------------------------------------
 
     def hook_price_display(self):
-        """Hook at C3/B9CF: replace JSR $052E with JSR to custom routine.
+        """Hook at C3/B9CF: replace JSR $052E with JSR to custom routine, and
+        NOP out the trailing DrawNum5 setup so this hook owns the drawing.
 
         In the buy-list draw loop, BA0C has just computed the per-unit price
-        and stored it to $F3-$F4 (and to $7E9F09).  Before the number-to-text
-        routine ($052E) converts $F3 for display, we multiply $F3-$F4 by the
-        pack size so the player sees the *total pack cost* in the item list.
+        and stored it to $F3-$F4 (and to $7E9F09).  The original C3/B9CF
+        sequence is::
+
+            B9CF  JSR $052E                   ; HexToDec5: $F3-$F4 → $F7-$FB
+            B9D2  REP #$20                    ; (16-bit A for the math below)
+            B9D4  LDA $7E9E89                 ; this row's BG1 base position
+            B9D8  CLC
+            B9D9  ADC #$001A                  ; standard 5-digit price column
+            B9DC  TAX
+            B9DD  SEP #$20                    ; (back to 8-bit A)
+            B9DF  JSR $049A                   ; DrawNum5: draw 5 tiles at X
+
+        We replace the JSR target at $B9CF and NOP out $B9D2-$B9E1 so this
+        hook also chooses the right HexToDec + DrawNum pair.  When the pack
+        price overflows 16 bits, we route through C3/0582 (8-digit 24-bit
+        conversion at $F7-$FE) and our DrawNum6 helper, which draws the
+        bottom six digits ($F9-$FE) at offset $0018 from the row's BG1 base
+        (one tile left of the standard column) so the visible "297040" lines
+        up under the column.  Otherwise we keep the vanilla 16-bit path.
 
         $7E9F09 is intentionally left unchanged (it keeps the unit price).
         The affordability fix is handled separately in hook_buy_setup /
@@ -481,17 +596,17 @@ class BuyMenu:
         src = [
             # Quick check: skip everything for normal shops
             asm.LDA(self.COMPACT_FLAG_DP, asm.DIR),  # $25
-            asm.BEQ("CONVERT"),
+            asm.BEQ("DRAW_5"),
 
             # Get pack size for current display slot $F1
             asm.LDA(0xf1, asm.DIR),
             asm.JSR(self._get_pack_addr_local(), asm.ABS),
             asm.CMP(0x00, asm.IMM8),
-            asm.BEQ("CONVERT"),
+            asm.BEQ("DRAW_5"),
             asm.CMP(0x01, asm.IMM8),           # pack=1 → no multiply needed
-            asm.BEQ("CONVERT"),
+            asm.BEQ("DRAW_5"),
 
-            # --- 16-bit multiply: $F3-$F4 *= pack_size (A) ---
+            # --- 16/8-bit multiply: ($F3-$F4) × pack_size (A) → 24-bit ---
             asm.STA(self.SLOT_TEMP_DP, asm.DIR),  # $42 = pack_size
 
             # Step 1: $F3 (low byte) * pack
@@ -512,29 +627,62 @@ class BuyMenu:
             asm.STA(0x4203, asm.ABS),
             asm.NOP(), asm.NOP(), asm.NOP(), asm.NOP(),
 
-            # Combine: final_high = R2_low + R1_high
+            # Combine into a 24-bit value at $62-$63 + $40.
             asm.CLC(),
-            asm.LDA(0x4216, asm.ABS),           # R2_low
-            asm.ADC(self.PACK_TEMP_DP + 1, asm.DIR),
-            asm.BCS("CAP"),
-            asm.STA(self.PACK_TEMP_DP + 1, asm.DIR),
-            asm.LDA(0x4217, asm.ABS),           # R2_high
-            asm.BNE("CAP"),
+            asm.LDA(0x4216, asm.ABS),                       # R2_low
+            asm.ADC(self.PACK_TEMP_DP + 1, asm.DIR),        # + R1_high
+            asm.STA(self.PACK_TEMP_DP + 1, asm.DIR),        # mid byte
+            asm.LDA(0x4217, asm.ABS),                       # R2_high
+            asm.ADC(0x00, asm.IMM8),                        # + carry
+            asm.STA(self.PACK_PRICE_HIGH_DP, asm.DIR),      # $40 = high
+            asm.BNE("DRAW_6"),                              # high != 0 → 24-bit path
 
-            # Store result back to $F3-$F4 for $052E
+            # Pack price fits in 16 bits: store back to $F3-$F4 for HexToDec5.
             asm.LDA(self.PACK_TEMP_DP, asm.DIR),
             asm.STA(0xf3, asm.DIR),
             asm.LDA(self.PACK_TEMP_DP + 1, asm.DIR),
             asm.STA(0xf4, asm.DIR),
-            asm.BRA("CONVERT"),
 
-            "CAP",
-            asm.LDA(0xff, asm.IMM8),
+            "DRAW_5",
+            # Vanilla 5-digit path: convert then draw at column $001A.
+            asm.JSR(0x052e, asm.ABS),                       # HexToDec5
+            asm.REP(0x20),
+            asm.LDA(0x7e9e89, asm.LNG),                     # row BG1 base
+            asm.CLC(),
+            asm.ADC(0x001a, asm.IMM16),                     # standard price column
+            asm.TAX(),
+            asm.SEP(0x20),
+            asm.JSR(0x049a, asm.ABS),                       # DrawNum5
+            asm.RTS(),
+
+            "DRAW_6",
+            # 24-bit path: stash the buy-list loop counter ($F1), load the
+            # 24-bit value into $F1-$F3 (where C3/0582 expects it), convert,
+            # then restore $F1 before drawing.
+            asm.LDA(0xf1, asm.DIR),
+            asm.STA(self.F1_SAVE_DP, asm.DIR),              # $41
+            asm.LDA(self.PACK_TEMP_DP, asm.DIR),            # pack low
+            asm.STA(0xf1, asm.DIR),
+            asm.LDA(self.PACK_TEMP_DP + 1, asm.DIR),        # pack mid
+            asm.STA(0xf2, asm.DIR),
+            asm.LDA(self.PACK_PRICE_HIGH_DP, asm.DIR),      # pack high
             asm.STA(0xf3, asm.DIR),
-            asm.STA(0xf4, asm.DIR),
 
-            "CONVERT",
-            asm.JMP(0x052e, asm.ABS),          # tail-call original text conversion
+            asm.JSR(0x0582, asm.ABS),                       # 24-bit → $F7-$FE
+
+            asm.LDA(self.F1_SAVE_DP, asm.DIR),
+            asm.STA(0xf1, asm.DIR),                          # restore loop counter
+
+            # Draw the six visible digits ($F9-$FE) one tile left of the
+            # vanilla column so the rightmost digit still lines up at $1A+8.
+            asm.REP(0x20),
+            asm.LDA(0x7e9e89, asm.LNG),
+            asm.CLC(),
+            asm.ADC(0x0018, asm.IMM16),                     # one tile left of $1A
+            asm.TAX(),
+            asm.SEP(0x20),
+            asm.JSR(self._draw_num6_addr_local(), asm.ABS),
+            asm.RTS(),
         ]
 
         space = Write(Bank.C3, src, "limited inventory: price display multiply")
@@ -546,6 +694,11 @@ class BuyMenu:
             (custom_addr & 0xffff).to_bytes(2, "little"),
         )
 
+        # NOP out the original DrawNum5 setup at B9D2-B9E1 (16 bytes:
+        # REP $20 ; LDA $7E9E89 ; CLC ; ADC #$001A ; TAX ; SEP $20 ; JSR DrawNum5).
+        # Our hook now owns both conversion and drawing.
+        space = Reserve(0x3b9d2, 0x3b9e1, "shop buy menu price display vanilla draw", asm.NOP())
+
     def hook_affordability_restore(self):
         """Hook at C3/B4E2: replace JSR $B7E6 with JSR to custom routine.
 
@@ -554,6 +707,12 @@ class BuyMenu:
         unit price from $60-$61 so the order menu and execute-buy routines
         continue to see the per-unit price (they multiply by $28=pack_size
         themselves).
+
+        Also restores the 24-bit player GP at $7E1860-$7E1862, which
+        hook_buy_setup may have zeroed to override B7E6's GP-high shortcut
+        when the actual pack price exceeded the player's GP.  Both B7E6 paths
+        (ample → RTS, unaffordable → JMP $B87D → RTS) wind up returning here,
+        so a single restore covers both.
 
         Entry state: 8-bit A, 16-bit X/Y.
         """
@@ -572,7 +731,15 @@ class BuyMenu:
             asm.TAX(),
             asm.LDA(self.UNIT_PRICE_SAVE_DP, asm.DIR),  # $60-$61 = saved unit price
             asm.STA(0x7e9f09, asm.LNG_X),       # restore
+
+            # Restore the 24-bit player GP from the $36-$38 snapshot.  Safe to
+            # do unconditionally (within limited mode): if hook_buy_setup
+            # didn't zero GP, this just writes the same value back.
+            asm.LDA(self.GP_LOW_SAVE_DP, asm.DIR),       # 16-bit ($36-$37)
+            asm.STA(0x7e1860, asm.LNG),
             asm.SEP(0x20),
+            asm.LDA(self.GP_HIGH_SAVE_DP, asm.DIR),      # $38
+            asm.STA(0x7e1862, asm.LNG),
             asm.PLX(),
 
             "DONE",
