@@ -38,7 +38,7 @@ class Config:
         # RAM $1D4E, one byte sets: gcsr wwww (gauge g, cursor c, sound s, reequip r, wallpaper wwww (0-7))
         src = [
             asm.LDA(0x00, asm.IMM8),  # default: 0
-            asm.STA(0x1D4E, asm.ABS),  
+            asm.STA(0x1D4E, asm.ABS),
             asm.RTS(),
         ]
         space = Write(Bank.C3, src, "Config_3_default")
@@ -48,4 +48,24 @@ class Config:
         space = Reserve(0x370c5, 0x370c7, "Config_3_default")
         space.write(
             asm.JSR(config3_loc, asm.ABS),
+        )
+
+        # Config 4, originally set by this code:
+        #   C3/70C8:	9C4F1D  	STZ $1D4F      ; Pad assignments
+        # RAM $1D4F, low nibble ----4321: bit (N - 1) set => player 2 controls
+        # battle character N when the Controller option is set to "multiple"
+        # (the in-game submenu reachable by pressing A on that row).  Relocate
+        # it behind a JSR like Config 2/3 so the default is reconfigurable.
+        src = [
+            asm.LDA(0x00, asm.IMM8),  # default: 0 (player 1 controls everyone)
+            asm.STA(0x1D4F, asm.ABS),
+            asm.RTS(),
+        ]
+        space = Write(Bank.C3, src, "Config_4_default")
+
+        # Update the JSR for Config default #4
+        config4_loc = space.start_address
+        space = Reserve(0x370c8, 0x370ca, "Config_4_default")
+        space.write(
+            asm.JSR(config4_loc, asm.ABS),
         )
