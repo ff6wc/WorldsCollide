@@ -345,7 +345,7 @@ class Espers():
         if not self.available_espers:
             return None
 
-        rand_esper = random.sample(sorted(self.available_espers), 1)[0]
+        rand_esper = random.choice(sorted(self.available_espers))
         self.available_espers.remove(rand_esper)
         return rand_esper
 
