@@ -38,14 +38,14 @@ def process(args):
 
 def flags(args):
     flags = ""
-    if args.coliseum_opponents_random:
+    if args.coliseum_opponents_random is not None:
         flags += f" -cor {args.coliseum_opponents_random}"
-    elif args.coliseum_opponents_shuffle_random:
+    elif args.coliseum_opponents_shuffle_random is not None:
         flags += f" -cosr {args.coliseum_opponents_shuffle_random}"
 
-    if args.coliseum_rewards_random:
+    if args.coliseum_rewards_random is not None:
         flags += f" -crr {args.coliseum_rewards_random}"
-    elif args.coliseum_rewards_shuffle_random:
+    elif args.coliseum_rewards_shuffle_random is not None:
         flags += f" -crsr {args.coliseum_rewards_shuffle_random}"
 
     if args.coliseum_rewards_visible_random:
@@ -65,11 +65,11 @@ def options(args):
     result = []
 
     # if Coliseum opponents are random
-    if args.coliseum_opponents_random:
+    if args.coliseum_opponents_random is not None:
         result.append(("Opponents", "Random", "opponents"))
         result.append(("  Random", f"{args.coliseum_opponents_random}%","coliseum_opponents_random"))
     # if Coliseum opponents are shuffle + random
-    elif args.coliseum_opponents_shuffle_random:
+    elif args.coliseum_opponents_shuffle_random is not None:
         result.append(("Opponents", "Random", "opponents"))
         result.append(("  Shuffle + Random", f"{args.coliseum_opponents_shuffle_random}%","coliseum_opponents_shuffle_random"))
     # else Coliseum opponents are Original
@@ -77,11 +77,11 @@ def options(args):
         result.append(("Opponents", "Original", "opponents"))
 
     # if Coliseum rewards are random
-    if args.coliseum_rewards_random:
+    if args.coliseum_rewards_random is not None:
         result.append(("Rewards", "Random", "rewards"))
         result.append(("  Random", f"{args.coliseum_rewards_random}%","coliseum_rewards_random"))
     # if Coliseum opponents are shuffle + random
-    elif args.coliseum_rewards_shuffle_random:
+    elif args.coliseum_rewards_shuffle_random is not None:
         result.append(("Rewards", "Random", "rewards"))
         result.append(("  Shuffle + Random", f"{args.coliseum_rewards_shuffle_random}%","coliseum_rewards_shuffle_random"))
     # else Coliseum opponents are Original
