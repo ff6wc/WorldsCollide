@@ -11,6 +11,10 @@ orchestrated by ``event/events.py`` ``Events.no_free_heals_mod()``:
   ambush.
 - ``modify_recovery_springs``: randomises the effect of recovery springs
   (Phantom Forest pool, Cave to South Figaro) into one of nine outcomes.
+- ``remove_coliseum_heal``    : stops the selected Coliseum fighter from being
+  fully healed (HP/MP/status) at the start of the match.
+- ``modify_vector_inn``       : reworks Vector's free inn (entry gate + scaled
+  thief) so its heal can no longer be free for a broke party.
 
 Per-event heal removals/restrictions gated by ``args.no_free_heals`` live
 in their respective event files (e.g. ``event/baren_falls.py``,
@@ -25,6 +29,7 @@ import random
 
 from memory.space import Bank, Reserve, Write
 from instruction.event import EVENT_CODE_START
+import instruction.asm as asm
 import instruction.field as field
 import instruction.field.entity as field_entity
 import data.event_bit as event_bit
@@ -68,6 +73,7 @@ def modify_inn_costs(maps, rom, dialogs, args):
         (0xc62b2, 300, 0x0649, "{price} GP if you wanna stay.<line>How 'bout it?<line><choice> Yes<line><choice> No<end>", "Albrook inn WOR"),
         (0xc6593, 200, 0x060D, "{price} GP per night!<line>Need a rest?<line><choice> Sure<line><choice> Nope<end>", "Maranda inn"),
         (0xc665f, 100, 0x064B, "You look tired!<line>{price} GP for a snooze.<line><choice> Yes<line><choice> No<end>", "Mobliz inn"),
+        (0xb7870, 400, 0x0973, "{price} GP per night.<line>Wanna rest?<line><choice> Yes<line><choice> No<end>", "Coliseum inn"),
         (0xc69d6, 200, None, None, "Kohlingen inn"),  # Shares dialog 0x060D with Maranda
         (0xcd2b3, 200, None, None, "Narshe inn"),  # Shares dialog 0x060D with Maranda
     ]
@@ -186,6 +192,150 @@ def modify_inn_costs(maps, rom, dialogs, args):
             print(f"Figaro Castle rest: {FIGARO_CASTLE_INN_PRICE} GP -> {figaro_price} GP")
     elif args.debug:
         print(f"Warning: Could not find Figaro Castle rest event at (47, 52)")
+
+
+# -----------------------------------------------------------------------------
+# COLISEUM FREE HEAL (bank C2)
+# -----------------------------------------------------------------------------
+# At the start of every battle the routine at C2/27A8 ("copy character's out of
+# battle stats into their battle stats") loads each character's current
+# HP/MP/status. If the character is flagged in zero-page $B8, it instead
+# overwrites current HP/MP with their maximum values and clears
+# Death/Petrify/Zombie/Clear -- i.e. a full heal. That flag is set in two
+# unrelated places during battle setup (C2/2F2F):
+#   * C2/2F85 ("LDA #$01 / TSB $B8") flags the selected Coliseum fighter, who
+#     is always loaded as character 1, and
+#   * C2/3023 ("TSB $B8") flags characters force-installed by a formation's
+#     special event (e.g. Gau returning from a Veldt leap).
+# NOPing only the Coliseum branch's flag set removes the free heal for the
+# chosen fighter (they now enter the match at their current HP/MP and status)
+# while leaving the special-event heal -- and the rest of the Coliseum logic,
+# which keys off the separate $3A97 flag -- untouched.
+COLISEUM_HEAL_FLAG_START = 0x22f83  # LDA #$01  (C2/2F83)
+COLISEUM_HEAL_FLAG_END = 0x22f86    # TSB $B8   (C2/2F86, inclusive)
+
+
+def remove_coliseum_heal(args):
+    """Remove the free full-heal applied to the selected Coliseum fighter.
+
+    NOPs the "LDA #$01 / TSB $B8" at C2/2F83 that flags the chosen fighter for
+    the start-of-battle HP/MP/status restore at C2/27A8. Characters installed
+    by a formation's special event are flagged separately (C2/3023) and keep
+    their heal.
+
+    Args:
+        args: Command line arguments (for debug flag)
+    """
+    Reserve(COLISEUM_HEAL_FLAG_START, COLISEUM_HEAL_FLAG_END,
+            "coliseum no free heal for selected fighter", asm.NOP())
+
+    if args.debug:
+        print("Removed Coliseum free heal for the selected fighter")
+
+
+# -----------------------------------------------------------------------------
+# VECTOR INN (Map 89, innkeeper NPC event at CC/945D)
+# -----------------------------------------------------------------------------
+# Vector's inn is free, with a scripted thief: after the party sleeps there is
+# a 50% chance (CC/94A1) an NPC sneaks in and takes 1000 GP (CC/94D4). In
+# vanilla, if the party can't afford the 1000 GP the "Take GP" silently fails
+# (event bit $1BE is set, no GP removed) and they still get the heal -- a free
+# heal whenever the player is broke.
+#
+# Under -nfh the inn is reworked (let N = 1000 * INN_COST_MULTIPLIER):
+#   * Talking to the innkeeper first tests for N/4 GP (RemoveGP then refund).
+#     Too poor -> "No room for yeh!" and no option to stay; otherwise the
+#     (still free) "Have a snooze?" prompt is offered.
+#   * The thief now steals N, falling back to N/2 then N/4 if the party can't
+#     afford the larger amount. The N/4 entry gate guarantees the final N/4
+#     theft always succeeds, so the heal is never free.
+VECTOR_INN_BASE_COST = 1000
+
+# Event addresses (file offsets; CC bank = SNES 0xCCxxxx - 0xC00000).
+VECTOR_INN_NPC_EVENT = 0xc945d       # CC/945D innkeeper event (Dialog $0559 + branch)
+VECTOR_INN_NPC_EVENT_END = 0xc9467   # ...through the trailing Return
+VECTOR_STAY_EVENT = 0xc9468          # CC/9468 original "sleep at the inn" event
+VECTOR_STEAL_TAKE = 0xc94d4          # CC/94D4 "Take 1000 GP" + branch + dialog + pause
+VECTOR_STEAL_TAKE_END = 0xc94e0      # ...through the pause that precedes the thief leaving
+VECTOR_AFTER_STEAL = 0xc94e1         # CC/94E1 thief leaves
+
+VECTOR_STAY_DIALOG_ID = 0x0559       # "It's on the house.<line>Have a snooze!" Yes/No
+VECTOR_STOLEN_DIALOG_ID = 0x055a     # repurposed for "<N> GP stolen!"
+# Free slot in the Maduin/Madonna esper-world block (1474 / $05C2). That
+# conversation never plays in WC, so the ID is safe -- see ARCHIVE.md
+# "Ruination Mode -- Dialog ID Reservations" (range 1474-1479 is the free band).
+VECTOR_NO_ROOM_DIALOG_ID = 1474
+
+
+def modify_vector_inn(dialogs, args):
+    """Rework Vector's free inn so the heal can never be free under -nfh.
+
+    Gates entry on having N/4 GP (where N = 1000 * INN_COST_MULTIPLIER) and
+    rescales the scripted theft to take N, then N/2, then N/4, so a paying
+    player is always charged before being healed while the random theft event
+    is preserved.
+
+    Args:
+        dialogs: The Dialogs object to update dialog text
+        args: Command line arguments (for debug flag)
+    """
+    N = min(VECTOR_INN_BASE_COST * INN_COST_MULTIPLIER, field.RemoveGP.MAX)
+    N_half = N // 2
+    N_quarter = N // 4
+
+    dialogs.set_text(VECTOR_STOLEN_DIALOG_ID, f"{N} GP stolen!<end>")
+    dialogs.set_text(VECTOR_NO_ROOM_DIALOG_ID, "No room for yeh!<end>")
+
+    # Entry gate: require N/4 GP to stay, then refund it (the stay is free).
+    gate_src = [
+        field.RemoveGP(N_quarter),
+        field.BranchIfEventBitSet(event_bit.NOT_ENOUGH_GP, "NO_ROOM"),
+        field.AddGP(N_quarter),
+        field.DialogBranch(VECTOR_STAY_DIALOG_ID, "STAY", "NO_STAY"),
+
+        "STAY",
+        field.Branch(VECTOR_STAY_EVENT),
+
+        "NO_STAY",
+        field.Return(),
+
+        "NO_ROOM",
+        field.ClearEventBit(event_bit.NOT_ENOUGH_GP),
+        field.Dialog(VECTOR_NO_ROOM_DIALOG_ID),
+        field.Return(),
+    ]
+    space = Write(Bank.CC, gate_src, "Vector inn entry gate")
+    gate_addr = space.start_address
+
+    space = Reserve(VECTOR_INN_NPC_EVENT, VECTOR_INN_NPC_EVENT_END,
+                    "Vector inn NPC redirect to entry gate", field.NOP())
+    space.write(field.Branch(gate_addr))
+
+    # Theft: steal N, falling back to N/2 then N/4. The gate guarantees the
+    # party has >= N/4, so the final RemoveGP always succeeds.
+    steal_src = [
+        field.RemoveGP(N),
+        field.BranchIfEventBitClear(event_bit.NOT_ENOUGH_GP, "STOLEN"),
+        field.ClearEventBit(event_bit.NOT_ENOUGH_GP),
+        field.RemoveGP(N_half),
+        field.BranchIfEventBitClear(event_bit.NOT_ENOUGH_GP, "STOLEN"),
+        field.ClearEventBit(event_bit.NOT_ENOUGH_GP),
+        field.RemoveGP(N_quarter),
+
+        "STOLEN",
+        field.Dialog(VECTOR_STOLEN_DIALOG_ID),
+        field.Pause(0.50),
+        field.Branch(VECTOR_AFTER_STEAL),
+    ]
+    space = Write(Bank.CC, steal_src, "Vector inn scaled theft")
+    steal_addr = space.start_address
+
+    space = Reserve(VECTOR_STEAL_TAKE, VECTOR_STEAL_TAKE_END,
+                    "Vector inn theft redirect", field.NOP())
+    space.write(field.Branch(steal_addr))
+
+    if args.debug:
+        print(f"Vector inn: entry gate {N_quarter} GP, theft {N}/{N_half}/{N_quarter} GP")
 
 
 # Battle pack for nighttime ambush at free beds.

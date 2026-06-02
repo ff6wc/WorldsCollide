@@ -1,6 +1,6 @@
 from memory.space import Bank, Allocate
 from event.event_reward import CHARACTER_ESPER_ONLY_REWARDS, RewardType, choose_reward, weighted_reward_choice
-from event.free_heals import modify_inn_costs, modify_free_bed_heals, modify_recovery_springs
+from event.free_heals import modify_inn_costs, modify_free_bed_heals, modify_recovery_springs, remove_coliseum_heal, modify_vector_inn
 import instruction.field as field
 
 class Events():
@@ -175,8 +175,10 @@ class Events():
         """Apply -nfh changes that wrap up free-heal removals/restrictions.
 
         Modifies inn costs (and converts free inns to paid), turns existing
-        free bed heals into HP-only heals with an ambush chance, and randomises
-        recovery spring effects. Per-event heal removals (Doma WoB Leader,
+        free bed heals into HP-only heals with an ambush chance, randomises
+        recovery spring effects, removes the free full-heal the Coliseum
+        applies to the selected fighter, and reworks Vector's free inn (entry
+        gate plus scaled thief). Per-event heal removals (Doma WoB Leader,
         Magitek 3 pre-crane, Vector heal hut, Phantom Train restaurant, Narshe
         school pot, Thamasa inn pricing) are gated locally in their respective
         event files via ``args.no_free_heals``.
@@ -190,6 +192,12 @@ class Events():
 
         # Modify recovery springs with random effects
         modify_recovery_springs(self.maps, self.rom, self.dialogs, self.args)
+
+        # Remove the free full-heal applied to the selected Coliseum fighter
+        remove_coliseum_heal(self.args)
+
+        # Rework Vector's free inn (entry gate + scaled thief)
+        modify_vector_inn(self.dialogs, self.args)
 
     def validate(self, events):
         char_esper_checks = []
