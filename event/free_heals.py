@@ -260,11 +260,13 @@ VECTOR_STEAL_TAKE_END = 0xc94e0      # ...through the pause that precedes the th
 VECTOR_AFTER_STEAL = 0xc94e1         # CC/94E1 thief leaves
 
 VECTOR_STAY_DIALOG_ID = 0x0559       # "It's on the house.<line>Have a snooze!" Yes/No
-VECTOR_STOLEN_DIALOG_ID = 0x055a     # repurposed for "<N> GP stolen!"
-# Free slot in the Maduin/Madonna esper-world block (1474 / $05C2). That
-# conversation never plays in WC, so the ID is safe -- see ARCHIVE.md
-# "Ruination Mode -- Dialog ID Reservations" (range 1474-1479 is the free band).
-VECTOR_NO_ROOM_DIALOG_ID = 1474
+VECTOR_STOLEN_FULL_DIALOG_ID = 0x055a    # repurposed for "<N> GP stolen!"
+# Free slots in the Maduin/Madonna esper-world block. That conversation never
+# plays in WC, so the IDs are safe -- see ARCHIVE.md "Ruination Mode -- Dialog
+# ID Reservations" (range 1474-1479 is the free band).
+VECTOR_NO_ROOM_DIALOG_ID = 1474          # $05C2: "No room for yeh!"
+VECTOR_STOLEN_HALF_DIALOG_ID = 1475      # $05C3: "<N/2> GP stolen!"
+VECTOR_STOLEN_QUARTER_DIALOG_ID = 1476   # $05C4: "<N/4> GP stolen!"
 
 
 def modify_vector_inn(dialogs, args):
@@ -283,8 +285,10 @@ def modify_vector_inn(dialogs, args):
     N_half = N // 2
     N_quarter = N // 4
 
-    dialogs.set_text(VECTOR_STOLEN_DIALOG_ID, f"{N} GP stolen!<end>")
     dialogs.set_text(VECTOR_NO_ROOM_DIALOG_ID, "No room for yeh!<end>")
+    dialogs.set_text(VECTOR_STOLEN_FULL_DIALOG_ID, f"{N} GP stolen!<end>")
+    dialogs.set_text(VECTOR_STOLEN_HALF_DIALOG_ID, f"{N_half} GP stolen!<end>")
+    dialogs.set_text(VECTOR_STOLEN_QUARTER_DIALOG_ID, f"{N_quarter} GP stolen!<end>")
 
     # Entry gate: require N/4 GP to stay, then refund it (the stay is free).
     gate_src = [
@@ -312,18 +316,27 @@ def modify_vector_inn(dialogs, args):
     space.write(field.Branch(gate_addr))
 
     # Theft: steal N, falling back to N/2 then N/4. The gate guarantees the
-    # party has >= N/4, so the final RemoveGP always succeeds.
+    # party has >= N/4, so the final RemoveGP always succeeds. Each amount
+    # reports the actual GP stolen.
     steal_src = [
         field.RemoveGP(N),
-        field.BranchIfEventBitClear(event_bit.NOT_ENOUGH_GP, "STOLEN"),
+        field.BranchIfEventBitClear(event_bit.NOT_ENOUGH_GP, "STOLEN_FULL"),
         field.ClearEventBit(event_bit.NOT_ENOUGH_GP),
         field.RemoveGP(N_half),
-        field.BranchIfEventBitClear(event_bit.NOT_ENOUGH_GP, "STOLEN"),
+        field.BranchIfEventBitClear(event_bit.NOT_ENOUGH_GP, "STOLEN_HALF"),
         field.ClearEventBit(event_bit.NOT_ENOUGH_GP),
         field.RemoveGP(N_quarter),
+        field.Dialog(VECTOR_STOLEN_QUARTER_DIALOG_ID),
+        field.Branch("STOLEN_DONE"),
 
-        "STOLEN",
-        field.Dialog(VECTOR_STOLEN_DIALOG_ID),
+        "STOLEN_HALF",
+        field.Dialog(VECTOR_STOLEN_HALF_DIALOG_ID),
+        field.Branch("STOLEN_DONE"),
+
+        "STOLEN_FULL",
+        field.Dialog(VECTOR_STOLEN_FULL_DIALOG_ID),
+
+        "STOLEN_DONE",
         field.Pause(0.50),
         field.Branch(VECTOR_AFTER_STEAL),
     ]
