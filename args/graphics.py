@@ -22,10 +22,19 @@ def parse(parser):
     graphics.add_argument("-ahtc", "--alternate-healing-text-color", action = "store_true",
                               help = "Makes healing text blue, to be able to distinguish from damage.")
 
+    graphics.add_argument("-steve", "--steveify", type = str, nargs='?', const='Steve', default=None,
+                          help = "Steveify the seed: rename all characters, items, espers, magic, enemies, etc. to a given name (default: Steve)")
+
 def process(args):
     import graphics.palettes.palettes as palettes
     import graphics.portraits.portraits as portraits
     import graphics.sprites.sprites as sprites
+
+    if args.steveify is not None:
+        if not args.steveify or args.steveify.isspace():
+            args.steveify = "Steve"
+        if len(args.steveify) > 6:
+            args.steveify = args.steveify[:6]
 
     if args.character_names is not None:
         args.names = args.character_names.split('.')
@@ -39,6 +48,9 @@ def process(args):
                 args.names[index] = Characters.DEFAULT_NAME[index]
     else:
         args.names = Characters.DEFAULT_NAME
+
+    if args.steveify is not None:
+        args.names = [args.steveify] * Characters.CHARACTER_COUNT
 
     args.palettes = []
     if args.character_palettes:
@@ -101,6 +113,8 @@ def flags(args):
 
     if args.character_names:
         flags += " -name " + args.character_names
+    if args.steveify:
+        flags += " -steve " + args.steveify
     if args.character_palettes:
         flags += " -cpal " + args.character_palettes
     if args.character_portraits:
@@ -191,6 +205,8 @@ def _other_options_log(args):
         ("Remove Flashes", remove_flashes, "remove_flashes"),
         ("World Minimap", world_minimap, "world_minimap"),
         ("Healing Text", healing_text, "healing_text"),
+        ("Who's There?", who_there, "who_there"),
+        ("Steveify", args.steveify if args.steveify else "None", "steveify"),
     ]
 
     for entry in entries:

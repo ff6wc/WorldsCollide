@@ -220,6 +220,11 @@ class Items():
             self.characters.characters[index].init_head = random.choice(tiers[Item.HELMET][1])
 
     def mod(self):
+        if self.args.steveify:
+            for item in self.items:
+                if item.id != self.EMPTY:
+                    item.name = self.args.steveify
+
         not_relic_condition = lambda x: x != Item.RELIC
         if self.args.item_equipable_random:
             self.equipable_random(not_relic_condition, self.args.item_equipable_random_min,

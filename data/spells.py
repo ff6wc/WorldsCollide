@@ -102,6 +102,23 @@ class Spells:
         space.write(0x44, 0x7f) #default: F6 4B
 
     def mod(self):
+        if self.args.steveify:
+            for spell in self.spells:
+                icon = ""
+                for tag in ['<black magic icon>', '<white magic icon>', '<gray magic icon>']:
+                    if spell.name.startswith(tag):
+                        icon = tag
+                        break
+                suffix = ""
+                for s in [" 2", " 3", "2"]:
+                    if spell.name.endswith(s):
+                        suffix = s
+                        break
+                
+                max_steve_len = 6 - len(suffix)
+                steve_part = self.args.steveify[:max_steve_len]
+                spell.name = f"{icon}{steve_part}{suffix}"
+
         if self.args.magic_mp_shuffle:
             self.shuffle_mp()
         elif self.args.magic_mp_random_value:
