@@ -193,6 +193,14 @@ class EnemyFormations():
         # The user-selected target boss ID
         target_boss_id = self.args.oops
 
+        if target_boss_id == "random":
+            import random
+            excluded_final_battle_ids = set(bosses.final_battle_enemy_name.keys())
+            excluded_final_battle_ids.remove(298) # Keep Kefka (Final) as valid!
+            valid_boss_ids = [eid for eid in bosses.enemy_name.keys() if eid not in excluded_final_battle_ids and eid not in bosses.removed_enemy_name]
+            target_boss_id = random.choice(valid_boss_ids)
+            self.args.oops = target_boss_id
+
         # Find the original formation ID of the chosen boss to get its native mold
         original_formation_id = None
         boss_name = None
@@ -209,6 +217,10 @@ class EnemyFormations():
                         break
                 if original_formation_id is not None:
                     break
+
+        if self.args.spoiler_log:
+            from log import section
+            section("Oops All Bosses", [f"    Boss: {boss_name} (ID {target_boss_id})"], [])
 
         target_mold = None
         if original_formation_id is not None:
