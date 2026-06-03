@@ -92,6 +92,9 @@ class Chests():
 
         # first shuffle the chests to mix up empty/item/gold positions
         self.shuffle(randomizable_types)
+        self.random_chests(randomizable_types)
+
+    def random_chests(self, randomizable_types):
         if self.args.chest_contents_shuffle_random_percent == 0:
             return
 
@@ -193,6 +196,91 @@ class Chests():
             gold_bits.append(chest.bit.to_bytes(2, "little"))
 
         chests_asm.scale_gold(gold_bits, self.gold_contents)
+
+    def shuffle_indices(self, types, indices):
+        import copy
+        chests_shuffle = list()
+        for index in indices:
+            chest = copy.deepcopy(self.all_chests[index])
+            if chest.type in types:
+                chests_shuffle.append(chest)
+        random.shuffle(chests_shuffle)
+
+        shuffle_index = 0
+        for index in indices:
+            chest = self.all_chests[index]
+            if chest.type in types:
+                shuffled_chest = chests_shuffle[shuffle_index]
+                shuffle_index += 1
+
+                chest.type = shuffled_chest.type
+                chest.contents = shuffled_chest.contents
+
+    def shuffle_by_world(self, types):
+        from data.area_chests import area_chests
+
+        # shuffle WoB and shared chests
+        wob_chests = list(area_chests["Narshe School"])
+        wob_chests += list(area_chests["Narshe Inside WOB"])
+        wob_chests += list(area_chests["Narshe Mines WOB"])
+        wob_chests += list(area_chests["Figaro Castle"])
+        wob_chests += list(area_chests["South Figaro Cave WOB"])
+        wob_chests += list(area_chests["South Figaro Outside WOB"])
+        wob_chests += list(area_chests["South Figaro Inside/Basement"])
+        wob_chests += list(area_chests["Duncan's House WOB"])
+        wob_chests += list(area_chests["Mt. Kolts"])
+        wob_chests += list(area_chests["Returner's Hideout"])
+        wob_chests += list(area_chests["Imperial Camp"])
+        wob_chests += list(area_chests["Doma"])
+        wob_chests += list(area_chests["Phantom Train"])
+        wob_chests += list(area_chests["Mobliz Inside"])
+        wob_chests += list(area_chests["Serpent Trench"])
+        wob_chests += list(area_chests["Nikeah"])
+        wob_chests += list(area_chests["Kohlingen"])
+        wob_chests += list(area_chests["Coliseum Owner's House WOB"])
+        wob_chests += list(area_chests["Zozo"])
+        wob_chests += list(area_chests["Owzer's Mansion"])
+        wob_chests += list(area_chests["Albrook Outside"])
+        wob_chests += list(area_chests["Albrook Inside"])
+        wob_chests += list(area_chests["Albrook Dock"])
+        wob_chests += list(area_chests["Maranda"])
+        wob_chests += list(area_chests["Magitek Factory"])
+        wob_chests += list(area_chests["Thamasa Outside"])
+        wob_chests += list(area_chests["Thamasa Strago's House"])
+        wob_chests += list(area_chests["Thamasa Burning House"])
+        wob_chests += list(area_chests["Esper Mountain"])
+        wob_chests += list(area_chests["Imperial Base"])
+        wob_chests += list(area_chests["Cave To Sealed Gate"])
+        wob_chests += list(area_chests["Floating Continent"])
+        self.shuffle_indices(types, wob_chests)
+
+        # shuffle WoR
+        wor_chests = list(area_chests["Narshe Mines WOR"])
+        wor_chests += list(area_chests["Figaro Castle Basement"])
+        wor_chests += list(area_chests["South Figaro Cave WOR"])
+        wor_chests += list(area_chests["South Figaro Outside WOR"])
+        wor_chests += list(area_chests["Cyan's Dream Phantom Train"])
+        wor_chests += list(area_chests["Mobliz Bookshelf Room WOR"])
+        wor_chests += list(area_chests["Mobliz Outside WOR"])
+        wor_chests += list(area_chests["Mt. Zozo"])
+        wor_chests += list(area_chests["Owzer's Basement"])
+        wor_chests += list(area_chests["Tzen Collapsing House"])
+        wor_chests += list(area_chests["Daryl's Tomb"])
+        wor_chests += list(area_chests["Veldt Cave WOR"])
+        wor_chests += list(area_chests["Ancient Cave"])
+        wor_chests += list(area_chests["Phoenix Cave"])
+        wor_chests += list(area_chests["Fanatic's Tower"])
+        wor_chests += list(area_chests["Zone Eater"])
+        wor_chests += list(area_chests["Umaro's Cave"])
+        wor_chests += list(area_chests["Kefka's Tower"])
+        self.shuffle_indices(types, wor_chests)
+
+    def shuffle_by_world_random(self):
+        randomizable_types = [Chest.EMPTY, Chest.ITEM, Chest.GOLD]
+
+        # first shuffle the chests to mix up empty/item/gold positions
+        self.shuffle_by_world(randomizable_types)
+        self.random_chests(randomizable_types)
 
     def chest_random_monsters(self, enemy_percent, boss_percent):
         from data.enemy_battle_groups import event_battle_groups_to_avoid, boss_event_battle_groups, event_battle_group_name, dragon_event_battle_groups, name_event_battle_group
@@ -303,11 +391,17 @@ class Chests():
             self.random_scaled()
         elif self.args.chest_contents_empty:
             self.clear_contents()
+        elif self.args.chest_contents_shuffle_by_world_random:
+            self.shuffle_by_world_random()
+            self.remove_excluded_items()
         else:
             self.remove_excluded_items()
 
         if self.args.chest_monsters_shuffle:
-            self.shuffle([Chest.MONSTER])
+            if self.args.chest_contents_shuffle_by_world_random:
+                self.shuffle_by_world([Chest.MONSTER])
+            else:
+                self.shuffle([Chest.MONSTER])
 
         # add randomized MIABs after other contents randomization/shuffle is complete
         if self.args.chest_random_monsters_enemy > 0:

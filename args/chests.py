@@ -14,6 +14,9 @@ def parse(parser):
                                  help = "Chest contents randomized by tier. Probability of higher tiers begins low and increases as more chests are opened")
     chests_contents.add_argument("-cce", "--chest-contents-empty", action = "store_true",
                                  help = "Chest contents empty")
+    chests_contents.add_argument("-ccswr", "--chest-contents-shuffle-by-world-random", default = None, type = int,
+                                 metavar = "PERCENT", choices = range(101),
+                                 help = "Chest contents shuffled within each world and given percent randomized")
 
     chests.add_argument("-chrm", "--chest-random-monsters", default = [0, 0], type = int,
                                  nargs = 2, metavar = ("ENEMY", "BOSS"), choices = range(101),
@@ -29,6 +32,10 @@ def process(args):
     if args.chest_random_monsters:
         args.chest_random_monsters_enemy = args.chest_random_monsters[0]
         args.chest_random_monsters_boss = args.chest_random_monsters[1]
+    if args.chest_contents_shuffle_by_world_random is not None:
+        args.chest_contents_shuffle_random_percent = args.chest_contents_shuffle_by_world_random
+        args.chest_contents_shuffle_by_world_random = True
+
 
 def flags(args):
     flags = ""
@@ -41,6 +48,8 @@ def flags(args):
         flags += " -ccrs"
     elif args.chest_contents_empty:
         flags += " -cce"
+    elif args.chest_contents_shuffle_by_world_random:
+        flags += f" -ccswr {args.chest_contents_shuffle_random_percent}"
     
     if args.chest_random_monsters:
         flags += f" -chrm {args.chest_random_monsters_enemy} {args.chest_random_monsters_boss}"
@@ -62,11 +71,15 @@ def options(args):
         contents_value = "Random Scaled"
     elif args.chest_contents_empty:
         contents_value = "Empty"
+    elif args.chest_contents_shuffle_by_world_random:
+        contents_value = "Shuffle by World + Random"
 
     result.append(("Contents", contents_value, "contents_value"))
     if args.chest_contents_shuffle_random:
         result.append(("Random Percent", f"{args.chest_contents_shuffle_random_percent}%", "chest_contents_shuffle_random_percent"))
-    
+    elif args.chest_contents_shuffle_by_world_random:
+        result.append(("Random Percent", f"{args.chest_contents_shuffle_random_percent}%", "chest_contents_shuffle_random_percent"))
+
     if args.chest_random_monsters:
         result.append(("MIAB Percent", f"{args.chest_random_monsters_enemy}%", "chest_random_monsters_enemy"))
         result.append(("  Boss Percent", f"{args.chest_random_monsters_boss}%", "chest_random_monsters_boss"))
@@ -81,6 +94,9 @@ def menu(args):
     if args.chest_contents_shuffle_random:
         entries[0] = ("Shuffle + Random", entries[1][1]) # put percent on same line
         del entries[1]                                   # delete random percent line
+    elif args.chest_contents_shuffle_by_world_random:
+        entries[0] = ("WShuffle + Random", entries[1][1]) # put percent on same line
+        del entries[1]                                            # delete random percent line
     else:
         entries[0] = (entries[0][1], "")
     
