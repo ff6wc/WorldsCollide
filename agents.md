@@ -154,12 +154,15 @@ AssertionError
 
 ## 7. Assembly Hooks and CPU Register Preservation
 
-**Error Signature**: Monster sprites appear as garbled noise blocks, or regular enemies have incorrect sprites.
-**Cause**: Modifying registers (such as `X` or `Y`) or using incorrect data bank instruction opcodes inside custom assembly subroutines. Specifically:
+**Error Signature**: Monster sprites appear as garbled noise blocks, or regular enemies have incorrect sprites, or the game crashes when returning from a hook.
+**Cause**: Modifying registers (such as `X` or `Y`), changing register sizes (`A8`/`A16` or `I8`/`I16`) inside a custom assembly subroutine, or using incorrect data bank instruction opcodes. Specifically:
 1. Destructively overwriting `X` inside a hook when the caller context relies on `X` containing the original graphics index.
 2. Using 16-bit absolute address instructions like `LDA absolute,X` (`0xBD`) to access 24-bit dynamic ROM banks (`F0`), which reads from the incorrect data bank and treats the third address byte as the opcode of the next instruction, shifting the entire instruction stream.
 3. Looking up active monster IDs from the wrong table or using the wrong index, leading to missing or un-rendered sprite overlays in multi-boss battles.
+4. Changing register sizes (e.g., using `SEP`/`REP` or `A8`/`A16`) inside a subroutine without preserving and restoring the caller's processor status register `P`. This will corrupt the caller's register size state upon returning, or cause initial instructions in the hook to read garbage high bytes if the caller was in `A16` mode.
 **Resolution**:
 - Always preserve and restore modified registers using `PHX`/`PLX` or `PHY`/`PLY` at the boundaries of your subroutine.
+- **Always preserve and restore the processor status register P** using `PHP` at the entry and `PLP` at all exit paths of your subroutine if register size modes (`A8`/`A16`, `I8`/`I16`) are changed, ensuring the caller's processor state is perfectly preserved.
+- When beginning a custom subroutine that changes register sizes, explicitly execute `A8()` or `A16()` right after `PHP` to ensure a consistent, known accumulator size for the initial instructions, avoiding reading 16-bit garbage high bytes if the caller was in a different mode.
 - Use 24-bit long addressing opcodes (`0xAF` for `LDA long`, `0xBF` for `LDA long,X`) when referencing addresses dynamically allocated to Bank `F0`.
 - Always load active monster IDs directly from the active monster ID table WRAM `$2001,X` (where `X` is `slot_index * 2`) after clearing the 16-bit Accumulator (using `TDC` `0x7B`) to avoid index register pollution. WRAM `$812F,X` is used by the graphics loader to hold the overwritten graphics ID (e.g. setting it to 0 to trigger Imp graphics), and does not hold the actual active monster IDs for lookup.

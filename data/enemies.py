@@ -469,8 +469,10 @@ class Enemies():
 
         # 3. Create the custom check_imp_graphics subroutine in Bank C0
         src = [
+            asm.PHP(),
             asm.PHX(),
             asm.TDC(),
+            asm.A8(),
             asm.LDA(0x81A7, asm.ABS),
             asm.TAY(),
             asm.LDA(0x62C2, asm.ABS_Y),
@@ -493,19 +495,12 @@ class Enemies():
             asm.LDA(table_addr, asm.LNG_X),
             asm.BNE("IS_IMP"),
 
-            "NOT_IMP",
-            asm.PLX(),
-            asm.LDA(0x81A7, asm.ABS),
-            asm.TAY(),
-            asm.LDA(0x00, asm.IMM8),
-            asm.RTL(),
-
             "NOT_IMP_16",
             asm.A8(),
-            asm.PLX(),
-            asm.LDA(0x81A7, asm.ABS),
-            asm.TAY(),
+            "NOT_IMP",
             asm.LDA(0x00, asm.IMM8),
+            asm.PLX(),
+            asm.PLP(),
             asm.RTL(),
 
             "IS_IMP",
@@ -516,11 +511,9 @@ class Enemies():
             asm.LDA(0x0000, asm.IMM16),
             asm.STA(0x812F, asm.ABS_X),
             asm.A8(),
-
-            asm.PLX(),
-            asm.LDA(0x81A7, asm.ABS),
-            asm.TAY(),
             asm.LDA(0x01, asm.IMM8),
+            asm.PLX(),
+            asm.PLP(),
             asm.RTL(),
         ]
         subroutine_space = Write(Bank.C0, src, "who's there check imp graphics")
