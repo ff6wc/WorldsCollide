@@ -24,11 +24,29 @@ def parse(parser):
 
     graphics.add_argument("-who", "--who-there", action = "store_true",
                               help = "Who's There? Bosses look like Imps and have the name '??????'")
+    graphics.add_argument("-steve", "--steveify", type = str, nargs='?', const='Steve', default=None,
+                          help = "Steveify the seed: rename all characters, items, espers, magic, enemies, etc. to a given name (default: Steve)")
 
 def process(args):
     import graphics.palettes.palettes as palettes
     import graphics.portraits.portraits as portraits
     import graphics.sprites.sprites as sprites
+
+    if args.steveify is not None:
+        if isinstance(args.steveify, bool):
+            if args.steveify:
+                args.steveify = "STEVE"
+            else:
+                args.steveify = None
+        elif not args.steveify or args.steveify.isspace() or args.steveify.lower() in ("none", "false"):
+            if args.steveify.lower() in ("none", "false"):
+                args.steveify = None
+            else:
+                args.steveify = "STEVE"
+
+        if args.steveify is not None:
+            if len(args.steveify) > 6:
+                args.steveify = args.steveify[:6]
 
     if args.character_names is not None:
         args.names = args.character_names.split('.')
@@ -42,6 +60,9 @@ def process(args):
                 args.names[index] = Characters.DEFAULT_NAME[index]
     else:
         args.names = Characters.DEFAULT_NAME
+
+    if args.steveify is not None:
+        args.names = [args.steveify] * Characters.CHARACTER_COUNT
 
     args.palettes = []
     if args.character_palettes:
@@ -104,6 +125,8 @@ def flags(args):
 
     if args.character_names:
         flags += " -name " + args.character_names
+    if args.steveify:
+        flags += " -steve " + args.steveify
     if args.character_palettes:
         flags += " -cpal " + args.character_palettes
     if args.character_portraits:
@@ -194,8 +217,10 @@ def options(args):
 
     return [
         ("Remove Flashes", remove_flashes, "remove_flashes"),
-        ("World Minimap", world_minimap, "world_minimap"),
+        ("Minimap", world_minimap, "world_minimap"),
         ("Healing Text", healing_text, "healing_text"),
+        ("Who's There?", who_there, "who_there"),
+        ("Steveify", args.steveify if args.steveify else "None", "steveify"),
     ]
 
 def menu(args):
