@@ -203,7 +203,7 @@ def _other_options_log(args):
 
     entries = [
         ("Remove Flashes", remove_flashes, "remove_flashes"),
-        ("World Minimap", world_minimap, "world_minimap"),
+        ("Minimap", world_minimap, "world_minimap"),
         ("Healing Text", healing_text, "healing_text"),
         ("Who's There?", who_there, "who_there"),
         ("Steveify", args.steveify if args.steveify else "None", "steveify"),
