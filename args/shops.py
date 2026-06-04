@@ -53,6 +53,9 @@ def parse(parser):
     shops.add_argument("-snil", "--shops-no-illuminas", action = "store_true",
                        help = "Illuminas not sold in shops")
 
+    shops.add_argument("-sli", "--shop-limited-inventory", action = "store_true",
+                       help = "Shops sell items in limited packs. Each item slot can only be bought once")
+
 def process(args):
     if args.shop_inventory_shuffle_random is not None:
         args.shop_inventory_shuffle_random_percent = args.shop_inventory_shuffle_random
@@ -105,6 +108,9 @@ def flags(args):
         flags += " -snee"
     if args.shops_no_illuminas:
         flags += " -snil"
+
+    if args.shop_limited_inventory:
+        flags += " -sli"
 
     return flags
 
@@ -159,6 +165,7 @@ def options(args):
         ("Expensive Balls", args.shops_expensive_super_balls, "shops_expensive_super_balls"),
         ("No Exp. Eggs", args.shops_no_exp_eggs, "shops_no_exp_eggs"),
         ("No Illuminas", args.shops_no_illuminas, "shops_no_illuminas"),
+        ("Limited Inventory", args.shop_limited_inventory, "shop_limited_inventory"),
     ])
     return result
 
