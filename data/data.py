@@ -86,10 +86,10 @@ class Data:
         if self.args.steveify:
             import data.text as text
             ability_name_bytes = bytearray()
+            name_bytes = bytearray(text.get_bytes(self.args.steveify, text.TEXT2))
+            name_bytes = name_bytes[:10]
+            name_bytes.extend([0xff] * (10 - len(name_bytes)))
             for i in range(175):
-                name_bytes = bytearray(text.get_bytes(self.args.steveify, text.TEXT2))
-                name_bytes = name_bytes[:10]
-                name_bytes.extend([0xff] * (10 - len(name_bytes)))
                 ability_name_bytes.extend(name_bytes)
             self.rom.set_bytes(0x26f7b9, ability_name_bytes)
 
