@@ -133,6 +133,10 @@ class Characters():
         if self.args.character_names:
             self.mod_names()
 
+        if self.args.steveify:
+            for character in self.characters:
+                character.name = self.args.steveify
+
         if self.args.original_name_display:
             characters_asm.show_original_names()
 

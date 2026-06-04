@@ -21,6 +21,8 @@ import data.title_graphics as title_graphics
 
 class Data:
     def __init__(self, rom, args):
+        self.rom = rom
+        self.args = args
         self.dialogs = dialogs
 
         self.spells = spells.Spells(rom, args)
@@ -81,6 +83,16 @@ class Data:
         self.title_graphics.mod()
 
     def write(self):
+        if self.args.steveify:
+            import data.text as text
+            ability_name_bytes = bytearray()
+            name_bytes = bytearray(text.get_bytes(self.args.steveify, text.TEXT2))
+            name_bytes = name_bytes[:10]
+            name_bytes.extend([0xff] * (10 - len(name_bytes)))
+            for i in range(175):
+                ability_name_bytes.extend(name_bytes)
+            self.rom.set_bytes(0x26f7b9, ability_name_bytes)
+
         self.dialogs.write()
         self.characters.write()
         self.items.write()

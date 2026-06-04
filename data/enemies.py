@@ -75,6 +75,8 @@ class Enemies():
                 return enemy.id
 
     def get_name(self, enemy_id):
+        if self.args.steveify:
+            return self.args.steveify
         if enemy_id in bosses.enemy_name:
             return bosses.enemy_name[enemy_id]
         return self.enemies[enemy_id].name
@@ -439,6 +441,13 @@ class Enemies():
             enemy.print()
 
     def write(self):
+        if self.args.steveify:
+            for enemy in self.enemies:
+                if enemy.name:
+                    enemy.name = self.args.steveify
+                if enemy.special_name:
+                    enemy.special_name = self.args.steveify
+
         for enemy_index in range(len(self.enemies)):
             self.enemy_data[enemy_index] = self.enemies[enemy_index].data()
             self.enemy_name_data[enemy_index] = self.enemies[enemy_index].name_data()
