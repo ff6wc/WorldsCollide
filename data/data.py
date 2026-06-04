@@ -87,7 +87,7 @@ class Data:
             import data.text as text
             ability_name_bytes = bytearray()
             for i in range(175):
-                name_bytes = text.get_bytes(self.args.steveify, text.TEXT2)
+                name_bytes = bytearray(text.get_bytes(self.args.steveify, text.TEXT2))
                 name_bytes = name_bytes[:10]
                 name_bytes.extend([0xff] * (10 - len(name_bytes)))
                 ability_name_bytes.extend(name_bytes)
