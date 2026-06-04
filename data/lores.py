@@ -253,10 +253,6 @@ class Lores:
         )
 
     def mod(self, dialogs):
-        if self.args.steveify:
-            for lore in self.lores:
-                lore.name = self.args.steveify
-
         self.write_learners_table()
         self.write_is_learner()
         self.after_battle_check_mod()
@@ -274,6 +270,15 @@ class Lores:
 
         if self.args.lores_level_randomize:
             self.random_lx_levels(dialogs)
+
+        if self.args.steveify:
+            import re
+            for lore in self.lores:
+                match = re.search('L.*[?1-9]', lore.name)
+                if match:
+                    lore.name = f"{match.group()} {self.args.steveify}"[:self.NAME_SIZE]
+                else:
+                    lore.name = self.args.steveify[:self.NAME_SIZE]
 
     def write(self):
         if self.args.spoiler_log:

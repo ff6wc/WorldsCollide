@@ -357,9 +357,7 @@ class Espers():
         return self.receive_dialogs[esper]
 
     def get_name(self, esper):
-        if self.args.steveify:
-            return self.args.steveify
-        return self.esper_names[esper]
+        return self.espers[esper].name
 
     def log(self):
         from log import COLUMN_WIDTH, section_entries, format_option

@@ -36,10 +36,12 @@ def process(args):
                 args.steveify = "STEVE"
             else:
                 args.steveify = None
-        elif not args.steveify or args.steveify.isspace() or args.steveify.lower() in ("none", "false"):
-            if args.steveify.lower() in ("none", "false"):
+        else:
+            args.steveify = args.steveify.strip()
+            steveify_upper = args.steveify.upper()
+            if steveify_upper in ("NONE", "FALSE"):
                 args.steveify = None
-            else:
+            elif not args.steveify:
                 args.steveify = "STEVE"
 
         if args.steveify is not None:
