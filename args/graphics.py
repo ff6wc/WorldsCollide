@@ -86,6 +86,19 @@ def process(args):
     else:
         args.sprite_palettes = DEFAULT_CHARACTER_SPRITE_PALETTES
 
+    if args.character_names is not None:
+        args.names = args.character_names.split('.')
+        if len(args.names) != Characters.CHARACTER_COUNT:
+            raise ValueError(f'Invalid number of name arguments ({len(args.names)} should be {Characters.CHARACTER_COUNT})')
+
+        for index in range(len(args.names)):
+            if args.names[index]:
+                args.names[index] = args.names[index][ : Characters.NAME_SIZE]
+            else:
+                args.names[index] = Characters.DEFAULT_NAME[index]
+    else:
+        args.names = Characters.DEFAULT_NAME
+
 def flags(args):
     flags = ""
 

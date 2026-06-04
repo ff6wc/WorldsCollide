@@ -443,12 +443,9 @@ class Enemies():
 
     def who_there_assembly(self):
         from memory.space import Bank, Write
-        from memory.space import Bank, Write
         import instruction.asm as asm
 
         # 1. Allocate a 1-byte flag in ROM representing if the flag is active (it will be 1)
-        who_there_flag_space = Write(Bank.F0, [1], "who's there flag")
-        flag_addr = who_there_flag_space.start_address_snes
         who_there_flag_space = Write(Bank.F0, [1], "who's there flag")
         flag_addr = who_there_flag_space.start_address_snes
 
@@ -459,11 +456,8 @@ class Enemies():
                 boss_table_bytes[enemy_id] = 1
         boss_table_bytes[282] = 1 # Include SrBehemoth (Undead) Phase 2
         for excluded_id in range(343, 352): # Exclude Final Battle Tiers
-        boss_table_bytes[282] = 1 # Include SrBehemoth (Undead) Phase 2
-        for excluded_id in range(343, 352): # Exclude Final Battle Tiers
             boss_table_bytes[excluded_id] = 0
         
-        boss_table_space = Write(Bank.F0, boss_table_bytes, "who's there boss table")
         boss_table_space = Write(Bank.F0, boss_table_bytes, "who's there boss table")
         table_addr = boss_table_space.start_address_snes
 
@@ -518,16 +512,6 @@ class Enemies():
         ]
         subroutine_space = Write(Bank.C0, src, "who's there check imp graphics")
         sub_addr = subroutine_space.start_address_snes
-
-        # 4. Patch the original graphics loader at ROM offset 0x01207B (Bank C1)
-        patch_src = [
-            asm.JSL(sub_addr),
-            asm.BEQ(0x09), # Branch to 0x01208A
-            asm.NOP(),
-            asm.NOP(),
-            asm.NOP(),
-        ]
-        Write(0x01207b, patch_src, "who's there imp graphics loader hook")
 
         # 4. Patch the original graphics loader at ROM offset 0x01207B (Bank C1)
         patch_src = [
