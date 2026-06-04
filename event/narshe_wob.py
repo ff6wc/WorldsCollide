@@ -15,10 +15,22 @@ class NarsheWOB(Event):
             field.ClearEventBit(npc_bit.SOLDIER_DOORWAY_ARVIS_HOUSE),
         )
 
+        if self.args.no_free_heals:
+            # Initialize the Narshe school bucket drink counter to 3 drinks.
+            # Two event bits encode the remaining drinks: (SCHOOL_LIMITED_HEALS_1,
+            # SCHOOL_LIMITED_HEALS_2) = (1,1)=3, (1,0)=2, (0,1)=1, (0,0)=0.
+            space.write(
+                field.SetEventBit(event_bit.SCHOOL_LIMITED_HEALS_1),
+                field.SetEventBit(event_bit.SCHOOL_LIMITED_HEALS_2),
+            )
+
     def mod(self):
         self.terra_elder_scene_mod()
         self.security_checkpoint_mod()
         self.shop_mod()
+
+        if self.args.no_free_heals:
+            self.limited_heals()
 
     def end_terra_scenario(self):
         # delete the end of terra's scenario event in arvis' house
@@ -85,3 +97,64 @@ class NarsheWOB(Event):
         space.write(
             field.Branch("INVOKE_SHOP"),
         )
+
+    def limited_heals(self):
+        """Limit the Narshe school heal bucket to 3 uses (gated by -nfh).
+
+        Two event bits track remaining drinks: (SCHOOL_LIMITED_HEALS_1,
+        SCHOOL_LIMITED_HEALS_2) = (1,1)=3, (1,0)=2, (0,1)=1, (0,0)=0. The bits
+        are initialized to (1,1) in ``init_event_bits`` when -nfh is active.
+        """
+        school_map_id = 0x068
+        pot_heal_address = 0xc33ae
+
+        three_id = 1470
+        two_id = 1469
+        one_id = 1468
+        empty_id = 1467
+
+        self.dialogs.set_text(three_id, "Drink from the bucket?<line>(3 drinks left)<line><choice> Yes<line><choice> No<end>")
+        self.dialogs.set_text(two_id, "Drink from the bucket?<line>(2 drinks left)<line><choice> Yes<line><choice> No<end>")
+        self.dialogs.set_text(one_id, "Drink from the bucket?<line>(1 drink left)<line><choice> Yes<line><choice> No<end>")
+        self.dialogs.set_text(empty_id, "The bucket is empty.<end>")
+
+        drink_src = [
+            field.BranchIfEventBitClear(event_bit.SCHOOL_LIMITED_HEALS_1, "TOP_CLEAR"),
+            field.BranchIfEventBitClear(event_bit.SCHOOL_LIMITED_HEALS_2, "TWO_DRINKS"),
+            # (1,1) = 3 drinks
+            field.DialogBranch(three_id, dest1="DRINK_3_TO_2", dest2="RETURN"),
+            "TWO_DRINKS",
+            # (1,0) = 2 drinks
+            field.DialogBranch(two_id, dest1="DRINK_2_TO_1", dest2="RETURN"),
+            "TOP_CLEAR",
+            field.BranchIfEventBitClear(event_bit.SCHOOL_LIMITED_HEALS_2, "EMPTY"),
+            # (0,1) = 1 drink
+            field.DialogBranch(one_id, dest1="DRINK_1_TO_0", dest2="RETURN"),
+            "EMPTY",
+            # (0,0) = 0 drinks
+            field.Dialog(empty_id),
+            "RETURN",
+            field.Return(),
+
+            # 3 -> 2 drinks: (1,1) -> (1,0), clear bottom
+            "DRINK_3_TO_2",
+            field.ClearEventBit(event_bit.SCHOOL_LIMITED_HEALS_2),
+            field.Branch("HEAL"),
+            # 2 -> 1 drinks: (1,0) -> (0,1), clear top, set bottom
+            "DRINK_2_TO_1",
+            field.ClearEventBit(event_bit.SCHOOL_LIMITED_HEALS_1),
+            field.SetEventBit(event_bit.SCHOOL_LIMITED_HEALS_2),
+            field.Branch("HEAL"),
+            # 1 -> 0 drinks: (0,1) -> (0,0), clear bottom
+            "DRINK_1_TO_0",
+            field.ClearEventBit(event_bit.SCHOOL_LIMITED_HEALS_2),
+            # fallthrough
+            "HEAL",
+            field.Call(pot_heal_address),
+            field.Return(),
+        ]
+        space = Write(Bank.CC, drink_src, "Limited use pot heal")
+
+        pot_npc_id = 0x12
+        pot_npc = self.maps.get_npc(school_map_id, pot_npc_id)
+        pot_npc.event_address = space.start_address - EVENT_CODE_START

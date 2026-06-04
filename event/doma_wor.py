@@ -155,6 +155,8 @@ class DomaWOR(Event):
         space = Reserve(0xb97de, 0xb97e0, "doma wor you must be wrexsoul", field.NOP())
         space = Reserve(0xb97e7, 0xb97e9, "doma wor you're too late", field.NOP())
         space = Reserve(0xb97fd, 0xb9801, "doma wor create cyan and add to party after wrexsoul", field.NOP())
+        if self.args.no_free_heals:
+            space = Reserve(0xb9802, 0xb9805, "doma wor remove free heal", field.NOP())
         space = Reserve(0xb9806, 0xb9812, "doma wor change party members after wrexsoul", field.NOP())
 
         space = Reserve(0xb9833, 0xb9950, "doma wor elayne and owain scene after wrexsoul", field.NOP())

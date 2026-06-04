@@ -18,6 +18,10 @@ class MagitekFactory(Event):
             field.SetEventBit(event_bit.TALKED_TO_SHIVA_MAGITEK_FACTORY),
             field.SetEventBit(event_bit.MET_SETZER_AFTER_MAGITEK_FACTORY),
         )
+        if self.args.no_free_heals:
+            space.write(
+                field.ClearEventBit(event_bit.VECTOR_FULL_HEAL_USED),
+            )
 
     def mod(self):
         self.setzer_npc_id = 0x18
@@ -51,6 +55,9 @@ class MagitekFactory(Event):
         self.crane_battle_mod()
         self.after_cranes_mod()
         self.guardian_mod()
+
+        if self.args.no_free_heals:
+            self.vector_heal_hut_mod()
 
         self.log_reward(self.reward1)
         self.log_reward(self.reward2)
@@ -331,6 +338,11 @@ class MagitekFactory(Event):
             battle_type = field.BattleType.PINCER
             battle_background = 37 # airship, center
 
+        if self.args.no_free_heals:
+            # Remove full heal before crane battle
+            # CB/40E1: B2 Call subroutine $CACFBD (heals all HP/MP/Statuses)
+            space = Reserve(0xb40e1, 0xb40e4, "remove pre-crane battle full heal", field.NOP())
+
         space = Reserve(0xb40e5, 0xb40eb, "magitek factory invoke battle cranes", field.NOP())
         space.write(
             field.InvokeBattleType(boss_pack_id, battle_type, battle_background),
@@ -363,3 +375,22 @@ class MagitekFactory(Event):
         self.maps.delete_event(0x0f2, 32, 60)
         self.maps.delete_event(0x0f2, 33, 60)
         self.maps.delete_event(0x0f2, 34, 59)
+
+    def vector_heal_hut_mod(self):
+        # Write branching code to make the Vector full-heal NPC a one-off (after the fight)
+        src = [
+            field.BranchIfEventBitSet(event_bit.VECTOR_FULL_HEAL_USED, "NO_HEAL"),
+            field.SetEventBit(event_bit.VECTOR_FULL_HEAL_USED),
+            field.Branch(0xc93C0),
+            "NO_HEAL",
+            field.Dialog(0x554),  # "Young people... Hang in there!"
+            field.Return()
+        ]
+        space = Write(Bank.CC, src, "Vector full heal restriction")
+        heal_hut_npc_branch_addr = space.start_address
+
+        # Modify NPC code to branch to new logic after the fight
+        space = Reserve(start_address=0xc9371, end_address=0xc9376, description='Modify vector heal hut NPC')
+        space.write([
+            field.BranchIfEventBitSet(destination=heal_hut_npc_branch_addr, event_bit=0x136)
+        ])
