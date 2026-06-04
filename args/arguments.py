@@ -67,6 +67,15 @@ class Arguments:
         if self.debug:
             self.spoiler_log = True
 
+        # Update the global args module attributes to match this Arguments instance,
+        # which is helpful if a wrapper script instantiates Arguments dynamically
+        # instead of importing the args module directly.
+        import sys
+        if "args" in sys.modules:
+            module = sys.modules["args"]
+            for name, value in self.__dict__.items():
+                setattr(module, name, value)
+
     def _process_min_max(self, arg_name):
         values = getattr(self, arg_name)
         if values:

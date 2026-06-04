@@ -130,6 +130,10 @@ class SwdTechs:
         space.write(0x00)
 
     def mod(self):
+        if self.args.steveify:
+            for swdtech in self.swdtechs:
+                swdtech.name = self.args.steveify
+
         self.write_learners_table()
         self.write_is_learner()
 

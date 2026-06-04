@@ -253,6 +253,10 @@ class Lores:
         )
 
     def mod(self, dialogs):
+        if self.args.steveify:
+            for lore in self.lores:
+                lore.name = self.args.steveify
+
         self.write_learners_table()
         self.write_is_learner()
         self.after_battle_check_mod()
