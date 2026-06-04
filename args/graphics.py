@@ -104,6 +104,8 @@ def flags(args):
 
     if args.character_names:
         flags += " -name " + args.character_names
+    if args.steveify:
+        flags += " -steve " + args.steveify
     if args.character_palettes:
         flags += " -cpal " + args.character_palettes
     if args.character_portraits:
@@ -196,6 +198,7 @@ def options(args):
         ("Remove Flashes", remove_flashes, "remove_flashes"),
         ("Minimap", world_minimap, "world_minimap"),
         ("Healing Text", healing_text, "healing_text"),
+        ("Steveify", args.steveify if args.steveify else "None", "steveify"),
     ]
 
 def menu(args):

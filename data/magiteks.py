@@ -34,6 +34,10 @@ class Magiteks:
         self.magiteks[self.ICE_BEAM].flags2 = 0x22
 
     def mod(self):
+        if self.args.steveify:
+            for magitek in self.magiteks:
+                magitek.name = self.args.steveify
+
         self.fix_reflectable_beams()
         pass
 

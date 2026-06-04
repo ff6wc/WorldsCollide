@@ -271,6 +271,15 @@ class Lores:
         if self.args.lores_level_randomize:
             self.random_lx_levels(dialogs)
 
+        if self.args.steveify:
+            import re
+            for lore in self.lores:
+                match = re.search('L.*[?1-9]', lore.name)
+                if match:
+                    lore.name = f"{match.group()} {self.args.steveify}"[:self.NAME_SIZE]
+                else:
+                    lore.name = self.args.steveify[:self.NAME_SIZE]
+
     def write(self):
         if self.args.spoiler_log:
             self.log()
