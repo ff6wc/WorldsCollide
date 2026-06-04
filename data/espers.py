@@ -275,10 +275,6 @@ class Espers():
         space = Reserve(0x24da3, 0x24da5, "espers set used in battle bit", asm.NOP())
 
     def mod(self, dialogs):
-        if self.args.steveify:
-            for esper in self.espers:
-                esper.name = self.args.steveify
-
         self.receive_dialogs_mod(dialogs)
 
         if self.args.esper_spells_shuffle or self.args.esper_spells_shuffle_random_rates:
@@ -357,8 +353,6 @@ class Espers():
         return self.receive_dialogs[esper]
 
     def get_name(self, esper):
-        if self.args.steveify:
-            return self.args.steveify
         return self.esper_names[esper]
 
     def log(self):
