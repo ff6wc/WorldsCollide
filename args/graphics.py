@@ -31,10 +31,20 @@ def process(args):
     import graphics.sprites.sprites as sprites
 
     if args.steveify is not None:
-        if not args.steveify or args.steveify.isspace():
-            args.steveify = "Steve"
-        if len(args.steveify) > 6:
-            args.steveify = args.steveify[:6]
+        if isinstance(args.steveify, bool):
+            if args.steveify:
+                args.steveify = "Steve"
+            else:
+                args.steveify = None
+        elif not args.steveify or args.steveify.isspace() or args.steveify.lower() in ("none", "false"):
+            if args.steveify.lower() in ("none", "false"):
+                args.steveify = None
+            else:
+                args.steveify = "Steve"
+
+        if args.steveify is not None:
+            if len(args.steveify) > 6:
+                args.steveify = args.steveify[:6]
 
     if args.character_names is not None:
         args.names = args.character_names.split('.')
