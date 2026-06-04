@@ -54,13 +54,22 @@ def process(args):
         excluded_final_battle_ids = set(bosses.final_battle_enemy_name.keys())
         excluded_final_battle_ids.remove(298) # Keep Kefka (Final) as valid!
 
+        # Build the set of valid boss IDs
+        valid_boss_ids = set()
+        for enemy_dict in [bosses.normal_enemy_name, bosses.dragon_enemy_name, bosses.statue_enemy_name, bosses.final_battle_enemy_name]:
+            valid_boss_ids.update(enemy_dict.keys())
+        valid_boss_ids.difference_update(excluded_final_battle_ids)
+
         try:
             # Try to parse as integer ID first
             oops_id = int(args.oops)
-            if not (0 <= oops_id <= 383) or oops_id in excluded_final_battle_ids:
-                raise ValueError()
+            if oops_id not in valid_boss_ids:
+                raise ValueError(f"Invalid boss ID: {oops_id}. Must be a valid boss enemy ID.")
             args.oops = oops_id
-        except ValueError:
+        except ValueError as e:
+            if "Invalid boss ID" in str(e):
+                raise e
+
             # If not a valid integer ID, try to parse as normalized name
             def normalize(name):
                 return "".join(c.lower() for c in name if c.isalnum())

@@ -201,30 +201,18 @@ class EnemyFormations():
             target_boss_id = random.choice(valid_boss_ids)
             self.args.oops = target_boss_id
 
-        # Find the original formation ID of the chosen boss to get its native mold
-        original_formation_id = None
-        boss_name = None
-        for enemy_dict in [bosses.normal_enemy_name, bosses.dragon_enemy_name, bosses.statue_enemy_name, bosses.final_battle_enemy_name]:
-            if target_boss_id in enemy_dict:
-                boss_name = enemy_dict[target_boss_id]
-                break
-
-        if boss_name is not None:
-            for formation_dict in [bosses.normal_formation_name, bosses.dragon_formation_name, bosses.statue_formation_name, bosses.final_battle_formation_name]:
-                for fid, name in formation_dict.items():
-                    if name == boss_name:
-                        original_formation_id = fid
-                        break
-                if original_formation_id is not None:
-                    break
+        boss_name = bosses.enemy_name.get(target_boss_id)
 
         if self.args.spoiler_log:
             from log import section
             section("Oops All Bosses", [f"    Boss: {boss_name} (ID {target_boss_id})"], [])
 
+        # Find the native mold of the chosen boss from any formation containing it
         target_mold = None
-        if original_formation_id is not None:
-            target_mold = self.formations[original_formation_id].mold
+        for formation in self.formations:
+            if target_boss_id in formation.enemies():
+                target_mold = formation.mold
+                break
 
         for formation in self.formations:
             has_boss = False
