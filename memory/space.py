@@ -87,10 +87,15 @@ class Space():
         self._update_label_pointers()
 
     def clear(self, value):
-        try:
-            values = [value] * (len(self) // len(value))
-        except:
+        # int-like fills (incl. IntEnum/IntFlag, whose len() returns a popcount
+        # on Python 3.11+) occupy one byte each.
+        if isinstance(value, int):
             values = [value] * len(self)
+        else:
+            try:
+                values = [value] * (len(self) // len(value))
+            except:
+                values = [value] * len(self)
 
         values = self._invoke_callables(values)
         assert len(self) == len(values) # do values evenly fill space?
@@ -175,10 +180,18 @@ class Space():
                 index += size
             else:
                 new_values.append(value)
-                try:
-                    index += len(value)
-                except:
+                # A flattened scalar byte value occupies one byte. int covers
+                # plain ints and IntEnum/IntFlag members (e.g. Flash, Status).
+                # NB: Python 3.11+ added len() to IntFlag (returns the popcount),
+                # so we must NOT use len() to size int-like values or the byte
+                # count desyncs and label pointers land at the wrong address.
+                if isinstance(value, int):
                     index += 1
+                else:
+                    try:
+                        index += len(value)
+                    except TypeError:
+                        index += 1
         return new_values
 
     def _update_label_pointers(self):
@@ -287,10 +300,15 @@ def Write(destination, data, description):
     data = flatten(data)
     for value in data:
         if not isinstance(value, str):
-            try:
-                size += len(value)
-            except TypeError:
+            # int-like values (incl. IntEnum/IntFlag, whose len() returns a
+            # popcount on Python 3.11+) occupy one byte each.
+            if isinstance(value, int):
                 size += 1
+            else:
+                try:
+                    size += len(value)
+                except TypeError:
+                    size += 1
 
     if isinstance(destination, Bank):
         space = Allocate(destination, size, description)
