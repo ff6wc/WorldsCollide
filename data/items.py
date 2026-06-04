@@ -223,8 +223,12 @@ class Items():
         if self.args.steveify:
             for item in self.items:
                 if item.id != self.EMPTY:
-                    item.name = self.args.steveify
-
+                    icon = ""
+                    if item.name.startswith("<"):
+                        end_tag = item.name.find(">")
+                        if end_tag != -1:
+                            icon = item.name[:end_tag + 1]
+                    item.name = f"{icon}{self.args.steveify}"
         not_relic_condition = lambda x: x != Item.RELIC
         if self.args.item_equipable_random:
             self.equipable_random(not_relic_condition, self.args.item_equipable_random_min,
