@@ -33,14 +33,14 @@ def process(args):
     if args.steveify is not None:
         if isinstance(args.steveify, bool):
             if args.steveify:
-                args.steveify = "Steve"
+                args.steveify = "STEVE"
             else:
                 args.steveify = None
         elif not args.steveify or args.steveify.isspace() or args.steveify.lower() in ("none", "false"):
             if args.steveify.lower() in ("none", "false"):
                 args.steveify = None
             else:
-                args.steveify = "Steve"
+                args.steveify = "STEVE"
 
         if args.steveify is not None:
             if len(args.steveify) > 6:
