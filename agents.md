@@ -24,9 +24,16 @@ To verify ROM modifications and successfully run a seed generation test, a valid
 
 ### 1.3 Test Data Isolation
 > [!IMPORTANT]
-> **TEST DATA DIRECTORY RULE**: All test output data (including modified test ROMs, debug log text files, or API metadata manifests generated during your test runs) **MUST** be isolated and placed inside a `tests` directory in the workspace root (e.g., `tests/test_output.smc`, `tests/test_output.txt`).
+> **TEST DATA DIRECTORY RULE**: All test output data (including modified test ROMs, debug log text files, or API metadata manifests generated during your test runs) **MUST** be isolated and placed inside the `tests` directory in the workspace root (e.g., `tests/test_output.smc`, `tests/test_output.txt`).
 > - Do not write test output files directly to the root directory.
-> - Ensure the `tests` directory is created before running commands (e.g. `mkdir -Force tests`).
+> - The `tests` directory also contains the committed unit test suite (`tests/test_*.py`); generated artifacts there are excluded from git via `.gitignore` (`*.smc`, `*.sfc`, `tests/*.txt`, `tests/*.json`).
+
+### 1.4 Unit Tests
+The `tests/` directory contains a unit test suite for the ROM-independent logic (memory allocation, label/branch encoding, compression, seeding, CLI parsing). It requires no ROM file:
+```powershell
+python3 -m unittest discover -s tests -v
+```
+Run this after any change to `memory/`, `utils/`, `seed.py`, or `valid_rom_file.py`, and add tests for new pure-Python logic. The same suite runs in CI (`.github/workflows/ci.yml`) on every push and pull request, along with `python -m compileall`, `wc.py -h`, and a guard that fails if any ROM-like or oversized file is ever committed.
 
 ---
 
@@ -64,8 +71,9 @@ During development, agents commonly trigger three specific errors. Here is how t
 ### 3.1 Memory Overflow / Bank Exhaustion
 **Error Signature**:
 ```text
-MemoryError: Not enough room in space "custom event toggle": Next (0xc0f124) > End (0xc0f100). Diff: 36
+memory.errors.RomSpaceError: Not enough room in space "custom event toggle": Next (0xc0f124) > End (0xc0f100). Diff: 36
 ```
+(`RomSpaceError` subclasses `MemoryError`, so older code or docs referring to `MemoryError` still apply. The overflow is detected *before* any bytes are written, so the ROM buffer is never corrupted by an overflowing write.)
 **Cause**: You have written more bytes of assembly instructions or static data than the target `Reserve` range fits, or have exceeded the size of a dynamically requested `Allocate` block in that bank.
 **Resolution**:
 1. Check the size parameters in your dynamic allocation: `Allocate(Bank.C0, size, "description")`. Increase `size` to support your assembly array length.

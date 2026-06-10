@@ -1,6 +1,7 @@
 from memory.rom import ROM
 from memory.heap import Heap
 from memory.label import Label, LabelPointer
+from memory.errors import RomSpaceError
 
 from enum import IntEnum
 BANK_SIZE = 0x10000
@@ -80,16 +81,20 @@ class Space():
         values = self._invoke_callables(values)
         values = self._parse_labels(values)
 
-        self._next_address = Space.rom.set_bytes(self.next_address, values)
-        if(self.next_address - 1 > self.end_address):
-            raise MemoryError(f"Not enough room in space \"{self.description}\": Next (0x{self.next_address -1:x}) > End (0x{self.end_address:x}). Diff: {(self.next_address - 1) - (self.end_address)}")
+        # validate bounds before writing so an overflow cannot corrupt bytes
+        # beyond the end of this space
+        last_address = self.next_address + len(values) - 1
+        if last_address > self.end_address:
+            raise RomSpaceError(f"Not enough room in space \"{self.description}\": Next (0x{last_address:x}) > End (0x{self.end_address:x}). Diff: {last_address - self.end_address}")
 
+        self._next_address = Space.rom.set_bytes(self.next_address, values)
         self._update_label_pointers()
 
     def clear(self, value):
         try:
             values = [value] * (len(self) // len(value))
-        except:
+        except TypeError:
+            # value is a single int (no len()), not a sequence
             values = [value] * len(self)
 
         values = self._invoke_callables(values)
@@ -177,7 +182,8 @@ class Space():
                 new_values.append(value)
                 try:
                     index += len(value)
-                except:
+                except TypeError:
+                    # value is a single byte/int (no len())
                     index += 1
         return new_values
 
