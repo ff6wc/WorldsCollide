@@ -12,6 +12,8 @@ This document is written for autonomous AI coding agents (such as Antigravity, S
 ### 1.1 Python Dependencies
 The randomizer runs entirely on Python 3 with the standard library. No external pip installations are required.
 
+Exception: the optional developer tools `graphics/tools/png_portrait.py` and `graphics/tools/png_sprite.py` (PNG-to-sprite conversion) require Pillow (`pip install Pillow`). The randomizer itself never imports it.
+
 ### 1.2 Target ROM File
 To verify ROM modifications and successfully run a seed generation test, a valid Super Nintendo FF6 ROM file is required:
 - **Filename**: ff3.smc (located in the workspace root).
