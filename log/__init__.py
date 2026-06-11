@@ -1,3 +1,12 @@
+"""Spoiler log setup. Importing this module has side effects:
+
+it creates the log file next to the output rom (or configures stdout
+logging with -slog), writes the header and flag sections, and writes the
+api manifest if -manifest was given. It must therefore only be imported
+after `args` is fully usable — in practice wc.py imports it first thing.
+Subsequent modules log by calling logging.info() or the format helpers
+from log.format.
+"""
 import logging, os
 from log.format import *
 

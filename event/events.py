@@ -21,6 +21,14 @@ class Events():
 
     def mod(self):
         # generate list of events from files
+        # each event lives in its own module and is discovered by naming
+        # convention: the class name must equal the module name with
+        # underscores removed, case-insensitive (e.g. mt_kolts.py -> MtKolts).
+        # a file without a matching class contributes no event (helpers like
+        # event_reward.py rely on this, but it also means a typo in a new
+        # event's class name makes it silently skipped). events load in
+        # sorted filename order, so an event's __init__ can only look up
+        # alphabetically-earlier events in name_event
         import os, importlib, inspect
         from event.event import Event
         events = []

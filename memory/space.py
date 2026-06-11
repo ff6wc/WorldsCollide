@@ -10,6 +10,18 @@ Bank = IntEnum("Bank", [(f"{value:X}", (value - 0xc0) * BANK_SIZE) for value in 
 START_ADDRESS_SNES = 0xc00000
 
 class Space():
+    """A contiguous range of rom addresses being written with code/data.
+
+    Construct via the module level helpers: Reserve() for fixed vanilla
+    address ranges, Allocate() for dynamic placement in a bank's free
+    space (made available with Free()), or Write() to allocate and write
+    in one call.
+
+    Class-level shared state: `Space.rom` is the single rom buffer
+    (assigned by memory.memory.Memory() at startup), `Space.heaps` tracks
+    each bank's free space, and `Space.spaces` is the sorted list of all
+    spaces created so far, used to detect overlapping reservations.
+    """
     rom = None
     heaps = { bank : Heap() for bank in Bank }
     spaces = []
@@ -135,6 +147,11 @@ class Space():
         return label_pointer # return a new pointer to a new label
 
     def _invoke_callables(self, values):
+        # expand instruction objects into their bytes. instructions (see
+        # instruction/asm.py) are callables: calling one with this space
+        # resolves it to a flat byte list (possibly containing LabelPointer
+        # placeholders). each instruction is also recorded by address in
+        # self.instructions so __repr__ can disassemble the space
         from utils.flatten import flatten
         result = []
         index = 0
@@ -152,6 +169,15 @@ class Space():
 
     def _parse_labels(self, values):
         # find labels (strs) in given values list and update the addresses of the labels and the label pointers
+        #
+        # labels support forward references in two passes:
+        # 1. here: a str value defines a label at the current address (and is
+        #    not written). a LabelPointer to a label already defined in this
+        #    space is resolved to bytes immediately; one not yet defined is
+        #    written as None placeholder bytes (16/24-bit) or left as the
+        #    LabelPointer object itself (8-bit, resolved lazily via __index__)
+        # 2. _update_label_pointers() (called after every write) overwrites
+        #    the placeholders once the target label has been defined
         index = 0
         new_values = []
         for value in values:
