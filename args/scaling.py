@@ -310,8 +310,8 @@ def menu(args):
             value = value.replace("Characters + Espers", "C + E")
             value = value.replace("Bosses + Dragons", "B + D")
             entries[index] = (key, value, unique_name)
-        except:
-            pass
+        except AttributeError:
+            pass # value is not a string (e.g. a submenu), leave entry unchanged
     return (name(), entries)
 
 def log(args):

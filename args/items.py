@@ -247,8 +247,8 @@ def menu(args):
             value = value.replace("Original + Random", "Original + ")
             value = value.replace("Shuffle + Random", "Shuffle + ")
             entries[index] = (key, value, unique_name)
-        except:
-            pass
+        except AttributeError:
+            pass # value is not a string (e.g. a submenu), leave entry unchanged
 
     return (name(), entries)
 
