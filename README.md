@@ -12,6 +12,8 @@ Complete objectives while searching the worlds for characters, espers, and items
 
 ## Usage
 
+Requires Python 3.9+ and an unheadered FFIII US v1.0 ROM.
+
 ```sh
 $ python3 wc.py -i ffiii.smc
 ```
@@ -19,3 +21,9 @@ $ python3 wc.py -i ffiii.smc
 ```sh
 $ python3 wc.py -h
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how the randomizer is put
+together, how to add flags/events, and the rules that keep old seeds
+reproducible. Never commit ROM files.
