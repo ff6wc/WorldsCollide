@@ -69,14 +69,26 @@ class Shops():
 
             random.shuffle(item_counts)
 
+            # if every shop with open slots already stocks the next item, the loop
+            # below can no longer make progress; fail loudly instead of hanging.
+            # the guards consume no rng so seed output is unchanged
+            stalled_picks = 0
+            MAX_STALLED_PICKS = 10000
+
             while len(items) > 0:
+                if not shop_indices or stalled_picks > MAX_STALLED_PICKS:
+                    raise RuntimeError(f"shops shuffle: cannot place {len(items)} remaining items, "
+                                       f"{len(shop_indices)} shops have open slots")
                 shop_index = random.choice(shop_indices)
                 shop = type_shops[shop_type][shop_index]
                 if not shop.contains(items[-1]):
+                    stalled_picks = 0
                     item = items.pop()
                     shop.append(item)
                     if shop.item_count == item_counts[shop_index]:
                         shop_indices.remove(shop_index)
+                else:
+                    stalled_picks += 1
 
     def random_tiered(self):
         def get_item(item_type, exclude = None):

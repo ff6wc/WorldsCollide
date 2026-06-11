@@ -101,10 +101,20 @@ class Espers():
 
         random.shuffle(spell_counts)
 
+        # if every esper with open slots already knows the next spell, the loop
+        # below can no longer make progress; fail loudly instead of hanging.
+        # the guards consume no rng so seed output is unchanged
+        stalled_picks = 0
+        MAX_STALLED_PICKS = 10000
+
         while len(spells) > 0:
+            if not esper_indices or stalled_picks > MAX_STALLED_PICKS:
+                raise RuntimeError(f"shuffle_spells: cannot place {len(spells)} remaining spells, "
+                                   f"{len(esper_indices)} espers have open slots")
             esper_index = random.choice(esper_indices)
             esper = self.espers[esper_index]
             if not esper.has_spell(spells[-1].id):
+                stalled_picks = 0
                 spell = spells.pop()
                 if self.args.esper_spells_shuffle_random_rates:
                     esper.add_spell(spell.id, random.choice(Esper.LEARN_RATES))
@@ -112,6 +122,8 @@ class Espers():
                     esper.add_spell(spell.id, spell.rate)
                 if esper.spell_count == spell_counts[esper_index]:
                     esper_indices.remove(esper_index)
+            else:
+                stalled_picks += 1
 
     def randomize_spells(self):
         for esper in self.espers:

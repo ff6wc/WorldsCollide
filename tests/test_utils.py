@@ -5,6 +5,7 @@ from utils.compression import compress, decompress
 from utils.flatten import flatten
 from utils.intersection import intersection
 from utils.shuffle_if import shuffle_if
+from utils.truncated_discrete_distribution import truncated_discrete_distribution
 from utils.weighted_random import weighted_random
 
 class TestFlatten(unittest.TestCase):
@@ -83,6 +84,24 @@ class TestWeightedRandom(unittest.TestCase):
                 self.assertEqual(weighted_random([0, 1, 0]), 1)
         finally:
             random.setstate(rng_state)
+
+class TestTruncatedDiscreteDistribution(unittest.TestCase):
+    def setUp(self):
+        self._rng_state = random.getstate()
+        random.seed("truncated_discrete_distribution test")
+
+    def tearDown(self):
+        random.setstate(self._rng_state)
+
+    def test_respects_bounds(self):
+        for _ in range(200):
+            result = truncated_discrete_distribution(10, 5, 8, 12)
+            self.assertTrue(8 <= result <= 12)
+
+    def test_impossible_bounds_raise(self):
+        # used to recurse forever; e.g. minimum above maximum
+        with self.assertRaises(ValueError):
+            truncated_discrete_distribution(10, 1, minimum = 110, maximum = 105)
 
 class TestShuffleIf(unittest.TestCase):
     def test_only_matching_elements_move(self):
