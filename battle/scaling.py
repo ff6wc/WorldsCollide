@@ -1,6 +1,7 @@
 from memory.space import Bank, Reserve, Write, Read
 from battle.scaling_functions import ScalingFunctions
 from battle.formation_flags import FormationFlag, formation_flags_address
+import constants.battle_addresses as addresses
 
 import instruction.asm as asm
 import instruction.c2 as c2
@@ -10,10 +11,10 @@ class _Scaling():
     def __init__(self):
         self.scaling_functions = ScalingFunctions()
 
-        self.enemy_level = 0x3b18
-        self.level_scale = 0x3ecc
-        self.hp_mp_scale = 0x3ecd
-        self.xp_gp_scale = 0x3ece
+        self.enemy_level = addresses.ENEMY_LEVEL
+        self.level_scale = addresses.LEVEL_SCALE
+        self.hp_mp_scale = addresses.HP_MP_SCALE
+        self.xp_gp_scale = addresses.XP_GP_SCALE
 
         self.load_scale_levels_mod()
         self.scale_value_mod()
