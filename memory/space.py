@@ -98,7 +98,8 @@ class Space():
             values = [value] * len(self)
 
         values = self._invoke_callables(values)
-        assert len(self) == len(values) # do values evenly fill space?
+        if len(self) != len(values): # do values evenly fill space?
+            raise ValueError(f"clear: {len(values)} values do not evenly fill space {str(self)} ({len(self)} bytes)")
 
         Space.rom.set_bytes(self.start_address, values)
         self._next_address = self.start_address
