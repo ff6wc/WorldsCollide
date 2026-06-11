@@ -47,6 +47,30 @@ class TestLabelPointer(unittest.TestCase):
         pointer = self._pointer(0x0ff, 0x100, LabelPointer.BRANCH_RELATIVE)
         self.assertEqual(int(pointer), 0xfe)
 
+    def test_branch_relative_to_self(self):
+        # distance 0 targets the operand byte itself: encoded offset -1 (0xff)
+        # (used to fall through unhandled and encode 0x00)
+        pointer = self._pointer(0x100, 0x100, LabelPointer.BRANCH_RELATIVE)
+        self.assertEqual(int(pointer), 0xff)
+
+    def test_branch_relative_boundaries(self):
+        # encodable distance range is [-127, 128] (offset range [-128, 127])
+        pointer = self._pointer(0x100 + 128, 0x100, LabelPointer.BRANCH_RELATIVE)
+        self.assertEqual(int(pointer), 127)
+
+        pointer = self._pointer(0x100 - 127, 0x100, LabelPointer.BRANCH_RELATIVE)
+        self.assertEqual(int(pointer), 0x80)
+
+        # one past each boundary must raise (distance -128 used to be
+        # accepted and silently encoded as a forward branch)
+        pointer = self._pointer(0x100 + 129, 0x100, LabelPointer.BRANCH_RELATIVE)
+        with self.assertRaises(ValueError):
+            int(pointer)
+
+        pointer = self._pointer(0x100 - 128, 0x100, LabelPointer.BRANCH_RELATIVE)
+        with self.assertRaises(ValueError):
+            int(pointer)
+
     def test_branch_relative_out_of_range_raises(self):
         pointer = self._pointer(0x200, 0x100, LabelPointer.BRANCH_RELATIVE)
         with self.assertRaises(ValueError):
