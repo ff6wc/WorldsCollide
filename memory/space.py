@@ -26,7 +26,7 @@ class Space():
     heaps = { bank : Heap() for bank in Bank }
     spaces = []
 
-    def __init__(self, start_address, end_address, description, clear_value = None):
+    def __init__(self, start_address: int, end_address: int, description: str, clear_value = None):
         self._start_address = start_address
         self._end_address = end_address
         self._next_address = self.start_address
@@ -87,7 +87,7 @@ class Space():
     def description(self):
         return self._description
 
-    def write(self, *values):
+    def write(self, *values) -> None:
         from utils.flatten import flatten
         values = flatten(values)
         values = self._invoke_callables(values)
@@ -116,10 +116,10 @@ class Space():
         Space.rom.set_bytes(self.start_address, values)
         self._next_address = self.start_address
 
-    def copy_from(self, start_address, end_address):
+    def copy_from(self, start_address: int, end_address: int) -> None:
         self.write(Space.rom.get_bytes(start_address, end_address - start_address + 1))
 
-    def add_label(self, name, address):
+    def add_label(self, name: str, address: int) -> None:
         self.labels[name] = Label(name)
         self.labels[name].address = address
 
@@ -294,26 +294,26 @@ class Space():
     def printr(self):
         print(repr(self))
 
-def Reserve(start_address, end_address, description, clear_value = None):
+def Reserve(start_address: int, end_address: int, description: str, clear_value = None) -> Space:
     bank_start = (start_address // BANK_SIZE) * BANK_SIZE
     heap = Space.heaps[Bank(bank_start)]
     heap.reserve(start_address, end_address)
 
     return Space(start_address, end_address, description, clear_value)
 
-def Allocate(bank, size, description, clear_value = None):
+def Allocate(bank: Bank, size: int, description: str, clear_value = None) -> Space:
     heap = Space.heaps[bank]
     start_address = heap.allocate(size)
     end_address = start_address + size - 1
 
     return Space(start_address, end_address, description, clear_value)
 
-def Free(start_address, end_address):
+def Free(start_address: int, end_address: int) -> None:
     bank_start = (start_address // BANK_SIZE) * BANK_SIZE
     heap = Space.heaps[Bank(bank_start)]
     heap.free(start_address, end_address)
 
-def Write(destination, data, description):
+def Write(destination, data, description: str) -> Space:
     from utils.flatten import flatten
 
     size = 0
@@ -332,5 +332,5 @@ def Write(destination, data, description):
     space.write(data)
     return space
 
-def Read(start_address, end_address):
+def Read(start_address: int, end_address: int) -> list:
     return Space.rom.get_bytes(start_address, end_address - start_address + 1)

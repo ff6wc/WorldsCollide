@@ -1,5 +1,5 @@
 class Label:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
         self.address = None
 
@@ -15,7 +15,7 @@ class LabelPointer:
         self.address = address      # address of the pointer itself
         self.mode = mode            # absolute, relative, branch_relative
 
-    def __int__(self):
+    def __int__(self) -> int:
         value = self.label.address + self.offset
         if self.mode == self.RELATIVE:
             return value - self.address
@@ -31,7 +31,7 @@ class LabelPointer:
             return (value - 1) % 256
         return value
 
-    def to_bytes(self, length, byteorder, *, signed = False):
+    def to_bytes(self, length: int, byteorder: str, *, signed: bool = False) -> bytes:
         return int(self).to_bytes(length, byteorder, signed = signed)
 
     def __index__(self):

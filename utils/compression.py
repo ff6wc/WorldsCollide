@@ -5,7 +5,7 @@ MIN_MULTI_LENGTH = 3
 MAX_MULTI_LENGTH = 34
 MAX_COMPRESS_SIZE = 2 ** 16 - 1
 
-def compress(data):
+def compress(data) -> list:
     result = []
     data_index = 0
 
@@ -77,7 +77,7 @@ def compress(data):
         raise ValueError(f"compress: data too large (compressed size {size} > {MAX_COMPRESS_SIZE})")
     return list(size.to_bytes(2, "little")) + result
 
-def decompress(data):
+def decompress(data) -> list:
     window = [0] * WINDOW_SIZE
     window_index = WINDOW_START
 
