@@ -62,7 +62,6 @@ class Espers():
         dialogs.set_text(self.receive_dialogs[self.BISMARK],    '<line>     Received the Magicite<line>              “Bismark.”<end>')
         dialogs.set_text(self.receive_dialogs[self.ODIN],       '<line>     Received the Magicite<line>              “Odin.”<end>')
         dialogs.set_text(self.receive_dialogs[self.RAIDEN],     '<line>     Received the Magicite<line>              “Raiden.”<end>')
-        #dialogs.set_text(self.receive_dialogs[self.RAIDEN],     '<line>   The Magicite "Odin" gains<line>              a level…<page><line>   and becomes the Magicite<line>              "Raiden!"<end>')
         dialogs.set_text(self.receive_dialogs[self.RAGNAROK],   '<line>     Received the Magicite<line>              “Ragnarok.”<end>')
         dialogs.set_text(self.receive_dialogs[self.CARBUNKL],   '<line>     Received the Magicite<line>              “Carbunkl.”<end>')
         dialogs.set_text(self.receive_dialogs[self.PHANTOM],    '<line>     Received the Magicite<line>              “Phantom.”<end>')

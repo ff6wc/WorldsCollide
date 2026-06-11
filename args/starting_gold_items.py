@@ -1,5 +1,3 @@
-import random
-
 def name():
     return "Starting Gold/Items"
 

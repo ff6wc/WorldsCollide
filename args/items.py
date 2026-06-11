@@ -258,9 +258,6 @@ def log(args):
     log = [name()]
 
     entries = options(args)
-    '''for entry in entries:
-        log.append(format_option(*entry))
-    '''
     for entry in entries:
         key, value, unique_name = entry
         if key == "Item Rewards":
