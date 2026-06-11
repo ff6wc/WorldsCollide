@@ -185,7 +185,7 @@ class _Scaling():
             asm.STA(0xea, asm.DIR),
             asm.JMP(self.scale_value, asm.ABS),
         ]
-        space = Write(Bank.C2, src, "scale hp/mp")
+        space = Write(Bank.C2, src, "scale xp/gp")
         self.scale_xp_gp = space.start_address
 
         if args.xp_gp_scaling:
