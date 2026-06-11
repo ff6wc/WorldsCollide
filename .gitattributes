@@ -1,0 +1,7 @@
+# normalize source line endings (checkout and commit as LF)
+*.py text eol=lf
+*.md text eol=lf
+
+# graphics data is binary; never diff or normalize it
+*.pal binary
+*.bin binary
