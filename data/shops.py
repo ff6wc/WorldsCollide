@@ -253,7 +253,6 @@ class Shops():
     def get_pack_size(self, item_id):
         """Determine pack size for an item based on its type/category."""
         import random
-        from data.item import Item
         from constants.items import (WEAPONS, SHIELDS, HELMETS, ARMORS, TOOLS, STARS, SKEANS, RELICS,
                                      junk_weapons, id_name, junk_armor)
 
