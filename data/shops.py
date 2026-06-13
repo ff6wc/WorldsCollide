@@ -338,9 +338,10 @@ class Shops():
 
         self.limited_shop_ids = shop_ids
         self.limited_shop_sram = {}
-        for i, shop_id in enumerate(sorted(set(shop_ids))):
+        unique_shop_ids = sorted(set(shop_ids))
+        for i, shop_id in enumerate(unique_shop_ids):
             if i >= len(sram_addresses):
-                print(f"Warning: Too many limited shops ({len(shop_ids)}), max {len(sram_addresses)}. Skipping shop {shop_id}")
+                print(f"Warning: Too many limited shops ({len(unique_shop_ids)}), max {len(sram_addresses)}. Skipping shop {shop_id}")
                 break
             self.limited_shop_sram[shop_id] = sram_addresses[i]
 
