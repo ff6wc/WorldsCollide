@@ -152,8 +152,9 @@ class BedHealCharacter(_Instruction):
     # Effect per character (mutually exclusive):
     #   dead                   -> revive to 1 HP (no-op if -permadeath)
     #   alive + any status     -> clear all field status bytes ($1614, $1615)
-    #   alive + HP < max HP    -> current HP += max HP / 2 (capped at max)
-    #   alive + at max HP      -> current MP += max MP / 2 (capped at max)
+    #   alive + HP < max HP or MP < max MP:
+    #                          -> current HP += max HP / 4 (capped at max)
+    #                          -> current MP += max MP / 4 (capped at max)
     def __init__(self, character):
         from instruction.c0 import character_data_offset
 
