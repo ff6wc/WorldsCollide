@@ -27,7 +27,7 @@ in their respective event files (e.g. ``event/baren_falls.py``,
 
 import random
 
-from memory.space import Bank, Reserve, Write
+from memory.space import Bank, Reserve, Write, Read
 from instruction.event import EVENT_CODE_START
 import instruction.asm as asm
 import instruction.field as field
