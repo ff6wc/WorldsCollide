@@ -77,6 +77,10 @@ class CharacterPalettes:
                 with open(palette_file, "rb") as pfile:
                     palette_data = list(pfile.read())
 
+                    expected_size = len(self.field_palettes[palette_index].data)
+                    if len(palette_data) != expected_size:
+                        raise ValueError(f"palette '{palette_file}' is {len(palette_data)} bytes, expected {expected_size}")
+
                     self.field_palettes[palette_index].data = palette_data
                     self.battle_palettes[palette_index].data = palette_data
 
@@ -104,6 +108,9 @@ class CharacterPalettes:
 
                 with open(portrait_palette_file, "rb") as pfile:
                     palette_data = list(pfile.read())
+                    expected_size = len(self.portrait_palettes[character].data)
+                    if len(palette_data) != expected_size:
+                        raise ValueError(f"portrait palette '{portrait_palette_file}' is {len(palette_data)} bytes, expected {expected_size}")
                     self.portrait_palettes[character].data = palette_data
 
     def mod(self):

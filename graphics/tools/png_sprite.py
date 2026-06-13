@@ -98,7 +98,11 @@ def write_sprite(output_prefix, sprite, tile_indices):
         output.write(bytes(sprite.data))
 
 def convert(image_path):
-    from PIL import Image
+    try:
+        from PIL import Image
+    except ImportError:
+        raise ImportError("this developer tool requires the Pillow library (pip install Pillow); "
+                          "the randomizer itself does not need it") from None
     image = Image.open(image_path)
 
     import os

@@ -30,7 +30,7 @@ def parse(parser):
     hp_mp_scaling = scaling.add_mutually_exclusive_group()
     hp_mp_scaling.add_argument("-hma", "--hp-mp-scaling-average", default = None, type = float,
                                metavar = ("VALUE"), choices = [x / 10.0 for x in range(5, 55, 5)],
-                               help = "Enemy and boss hp/mp scales %(metavar)s * party averaage level")
+                               help = "Enemy and boss hp/mp scales %(metavar)s * party average level")
     hp_mp_scaling.add_argument("-hmh", "--hp-mp-scaling-highest", default = None, type = float,
                                metavar = ("VALUE"), choices = [x / 10.0 for x in range(5, 55, 5)],
                                help = "Enemy and boss hp/mp scales %(metavar)s * highest level in party")
@@ -53,7 +53,7 @@ def parse(parser):
     xp_gp_scaling = scaling.add_mutually_exclusive_group()
     xp_gp_scaling.add_argument("-xga", "--xp-gp-scaling-average", default = None, type = float,
                                metavar = ("VALUE"), choices = [x / 10.0 for x in range(5, 55, 5)],
-                               help = "Enemy and boss exp/gp scales %(metavar)s * party averaage level")
+                               help = "Enemy and boss exp/gp scales %(metavar)s * party average level")
     xp_gp_scaling.add_argument("-xgh", "--xp-gp-scaling-highest", default = None, type = float,
                                metavar = ("VALUE"), choices = [x / 10.0 for x in range(5, 55, 5)],
                                help = "Enemy and boss exp/gp scales %(metavar)s * highest level in party")
@@ -310,8 +310,8 @@ def menu(args):
             value = value.replace("Characters + Espers", "C + E")
             value = value.replace("Bosses + Dragons", "B + D")
             entries[index] = (key, value, unique_name)
-        except:
-            pass
+        except AttributeError:
+            pass # value is not a string (e.g. a submenu), leave entry unchanged
     return (name(), entries)
 
 def log(args):

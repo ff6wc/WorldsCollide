@@ -8,7 +8,7 @@ import data.event_bit as event_bit
 import objectives
 import args
 
-enemy_level_address = 0x3b18
+from constants.battle_addresses import ENEMY_LEVEL as enemy_level_address
 
 class _LoadEnemyLevel:
     def __init__(self):

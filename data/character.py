@@ -85,7 +85,7 @@ class Character():
         if value < self.MIN_RUN_SUCCESS or value > self.MAX_RUN_SUCCESS:
             raise ValueError(f"Character.init_run_success setter: invalid value {value}")
 
-        self._init_run_success = value - self.MAX_RUN_SUCCESS
+        self._init_run_success = self.MAX_RUN_SUCCESS - value
 
     # initial level of characters is 3
     # when new character is recruited, their level is set to the average of all other recruited characters + init_level_factor

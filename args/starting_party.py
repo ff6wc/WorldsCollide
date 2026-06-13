@@ -35,10 +35,12 @@ def process(args):
         args.start_chars = ["random"]
     else:
         # ensure only 4 starting characters and no duplicates (except random)
-        assert len(args.start_chars) <= 4
+        if len(args.start_chars) > 4:
+            args.parser.error("starting-party: at most 4 starting characters allowed")
         start_chars_found = set()
         for char in args.start_chars:
-            assert (char == "random" or char == "randomngu" or char not in start_chars_found)
+            if char not in ("random", "randomngu") and char in start_chars_found:
+                args.parser.error(f"starting-party: duplicate starting character '{char}'")
             start_chars_found.add(char)
 
 def flags(args):

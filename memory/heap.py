@@ -1,5 +1,7 @@
+from memory.errors import RomSpaceError
+
 class Block:
-    def __init__(self, start, end):
+    def __init__(self, start: int, end: int):
         if start > end:
             self._start = end
             self._end = start
@@ -35,7 +37,7 @@ class Heap:
         self.blocks = []
         self._available = 0
 
-    def allocate(self, size):
+    def allocate(self, size: int) -> int:
         def find_best_fit(size):
             best_block = None
             if not self.blocks:
@@ -53,7 +55,7 @@ class Heap:
 
         block = find_best_fit(size)
         if block is None:
-            raise MemoryError(f"Unable to allocate block of size {size}")
+            raise RomSpaceError(f"Unable to allocate block of size {size}")
 
         start = block.start
         block.start += size
@@ -62,7 +64,7 @@ class Heap:
         self._available -= size
         return start
 
-    def free(self, start, end):
+    def free(self, start: int, end: int) -> None:
         new_block = Block(start, end)
 
         overlaps = set()
@@ -86,7 +88,7 @@ class Heap:
                 self._available += block.size
         self.blocks = new_blocks
 
-    def reserve(self, start, end):
+    def reserve(self, start: int, end: int) -> None:
         reserved = Block(start, end)
 
         overlaps = set()

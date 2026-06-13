@@ -50,50 +50,34 @@ class Sprite:
                     result.append(result_row)
         return result
 
-    def rgb_data(self, pose):
+    BITS_PER_VALUE = 8 # rgb component size in ppm output
+
+    def _pose_rgb(self, pose):
+        # render a pose (matrix of tile ids) to (width, height, flat rgb values)
         pose_values = self.tile_matrix(pose)
 
-        OUTPUT_WIDTH = SpriteTile.COL_COUNT * len(pose[0])
-        OUTPUT_HEIGHT = SpriteTile.ROW_COUNT * len(pose)
+        width = SpriteTile.COL_COUNT * len(pose[0])
+        height = SpriteTile.ROW_COUNT * len(pose)
 
         rgb_values = []
-        for row_index in range(OUTPUT_HEIGHT):
-            for col_index in range(OUTPUT_WIDTH):
+        for row_index in range(height):
+            for col_index in range(width):
                 color_id = pose_values[row_index][col_index]
                 rgb_values.extend(self.palette.colors[color_id].rgb)
 
-        return rgb_values
+        return width, height, rgb_values
+
+    def rgb_data(self, pose):
+        return self._pose_rgb(pose)[2]
 
     def write_ppm(self, output_file, pose):
-        import graphics.poses as poses
-        pose_values = self.tile_matrix(pose)
-
-        OUTPUT_WIDTH = SpriteTile.COL_COUNT * len(pose[0])
-        OUTPUT_HEIGHT = SpriteTile.ROW_COUNT * len(pose)
-        BITS_PER_VALUE = 8
-
-        rgb_values = []
-        for row_index in range(OUTPUT_HEIGHT):
-            for col_index in range(OUTPUT_WIDTH):
-                color_id = pose_values[row_index][col_index]
-                rgb_values.extend(self.palette.colors[color_id].rgb)
+        width, height, rgb_values = self._pose_rgb(pose)
 
         from graphics.ppm import write_ppm6
-        write_ppm6(OUTPUT_WIDTH, OUTPUT_HEIGHT, BITS_PER_VALUE, rgb_values, output_file)
+        write_ppm6(width, height, self.BITS_PER_VALUE, rgb_values, output_file)
 
     def get_ppm(self, pose):
-        import graphics.poses as poses
-        pose_values = self.tile_matrix(pose)
-
-        OUTPUT_WIDTH = SpriteTile.COL_COUNT * len(pose[0])
-        OUTPUT_HEIGHT = SpriteTile.ROW_COUNT * len(pose)
-        BITS_PER_VALUE = 8
-
-        rgb_values = []
-        for row_index in range(OUTPUT_HEIGHT):
-            for col_index in range(OUTPUT_WIDTH):
-                color_id = pose_values[row_index][col_index]
-                rgb_values.extend(self.palette.colors[color_id].rgb)
+        width, height, rgb_values = self._pose_rgb(pose)
 
         from graphics.ppm import get_ppm
-        return get_ppm(OUTPUT_WIDTH, OUTPUT_HEIGHT, BITS_PER_VALUE, rgb_values)
+        return get_ppm(width, height, self.BITS_PER_VALUE, rgb_values)

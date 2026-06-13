@@ -1,3 +1,12 @@
+"""Spoiler log setup. Importing this module has side effects:
+
+it creates the log file next to the output rom (or configures stdout
+logging with -slog), writes the header and flag sections, and writes the
+api manifest if -manifest was given. It must therefore only be imported
+after `args` is fully usable — in practice wc.py imports it first thing.
+Subsequent modules log by calling logging.info() or the format helpers
+from log.format.
+"""
 import logging, os
 from log.format import *
 
@@ -8,7 +17,8 @@ if args.stdout_log:
     import sys
     logging.basicConfig(stream = sys.stdout, filemode = 'w', level = logging.INFO, format = "%(message)s")
 else:
-    logging.basicConfig(filename = log_file, filemode = 'w', level = logging.INFO, format = "%(message)s")
+    # explicit utf-8 so log content is identical across platforms (notably Windows)
+    logging.basicConfig(filename = log_file, filemode = 'w', level = logging.INFO, format = "%(message)s", encoding = "utf-8")
 
 hash = ', '.join([entry.name for entry in args.sprite_hash])
 import time

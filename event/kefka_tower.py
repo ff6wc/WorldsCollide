@@ -1,5 +1,4 @@
 from event.event import *
-import args
 
 class KefkaTower(Event):
     def name(self):

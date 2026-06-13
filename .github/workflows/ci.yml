@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  rom-guard:
+    name: ROM safety guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if ROM or oversized files are tracked
+        run: |
+          set -e
+          rom_files=$(git ls-files | grep -iE '\.(smc|sfc)$' || true)
+          if [ -n "$rom_files" ]; then
+            echo "::error::ROM files must never be committed (legal requirement):"
+            echo "$rom_files"
+            exit 1
+          fi
+          # largest legitimate source file is ~56KB; anything over 512KB is suspect
+          big_files=$(git ls-files -z | xargs -0 du -b 2>/dev/null | awk '$1 > 524288 {print $2 " (" $1 " bytes)"}')
+          if [ -n "$big_files" ]; then
+            echo "::error::Unexpectedly large files tracked (possible ROM or binary data):"
+            echo "$big_files"
+            exit 1
+          fi
+
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Syntax check all modules
+        run: python -m compileall -q .
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: CLI smoke test
+        run: python wc.py -h

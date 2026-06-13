@@ -626,7 +626,8 @@ class SetMapTiles(_Instruction):
 class SetEventBit(_Instruction):
     def __init__(self, event_bit):
         self.event_bit = event_bit
-        assert self.event_bit <= 0x6ff
+        if not 0 <= self.event_bit <= 0x6ff:
+            raise ValueError(f"SetEventBit: invalid event bit {hex(self.event_bit)}, must be within 0x000-0x6ff")
 
         opcode = 0xd0 + (self.event_bit // 0x100) * 2
         arg = self.event_bit & 0xff
@@ -638,7 +639,8 @@ class SetEventBit(_Instruction):
 class ClearEventBit(_Instruction):
     def __init__(self, event_bit):
         self.event_bit = event_bit
-        assert self.event_bit <= 0x6ff
+        if not 0 <= self.event_bit <= 0x6ff:
+            raise ValueError(f"ClearEventBit: invalid event bit {hex(self.event_bit)}, must be within 0x000-0x6ff")
 
         opcode = 0xd1 + (self.event_bit // 0x100) * 2
         arg = self.event_bit & 0xff

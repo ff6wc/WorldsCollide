@@ -49,7 +49,9 @@ def choose_reward(possible_types, characters, espers, items):
 
     # tried all possible_rewards and none were available
     # probably running out of chars and espers and need to make item rewards possible for more events
-    assert(item_possible)
+    if not item_possible:
+        raise RuntimeError(f"choose_reward: no rewards available for types {possible_types}: "
+                           "characters/espers are exhausted and this slot does not allow items")
     return (items.get_good_random(), RewardType.ITEM)
 
 # Documentation from AtmaTek:

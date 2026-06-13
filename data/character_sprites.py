@@ -79,6 +79,9 @@ class CharacterSprites:
 
                 with open(portrait_sprite_file, "rb") as pfile:
                     portrait_data = list(pfile.read())
+                    expected_size = len(self.portrait_sprites[character].data)
+                    if len(portrait_data) != expected_size:
+                        raise ValueError(f"portrait '{portrait_sprite_file}' is {len(portrait_data)} bytes, expected {expected_size}")
                     self.portrait_sprites[character].data = portrait_data
 
     def mod(self):

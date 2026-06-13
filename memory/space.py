@@ -1,6 +1,7 @@
 from memory.rom import ROM
 from memory.heap import Heap
 from memory.label import Label, LabelPointer
+from memory.errors import RomSpaceError
 
 from enum import IntEnum
 BANK_SIZE = 0x10000
@@ -9,11 +10,23 @@ Bank = IntEnum("Bank", [(f"{value:X}", (value - 0xc0) * BANK_SIZE) for value in 
 START_ADDRESS_SNES = 0xc00000
 
 class Space():
+    """A contiguous range of rom addresses being written with code/data.
+
+    Construct via the module level helpers: Reserve() for fixed vanilla
+    address ranges, Allocate() for dynamic placement in a bank's free
+    space (made available with Free()), or Write() to allocate and write
+    in one call.
+
+    Class-level shared state: `Space.rom` is the single rom buffer
+    (assigned by memory.memory.Memory() at startup), `Space.heaps` tracks
+    each bank's free space, and `Space.spaces` is the sorted list of all
+    spaces created so far, used to detect overlapping reservations.
+    """
     rom = None
     heaps = { bank : Heap() for bank in Bank }
     spaces = []
 
-    def __init__(self, start_address, end_address, description, clear_value = None):
+    def __init__(self, start_address: int, end_address: int, description: str, clear_value = None):
         self._start_address = start_address
         self._end_address = end_address
         self._next_address = self.start_address
@@ -74,34 +87,39 @@ class Space():
     def description(self):
         return self._description
 
-    def write(self, *values):
+    def write(self, *values) -> None:
         from utils.flatten import flatten
         values = flatten(values)
         values = self._invoke_callables(values)
         values = self._parse_labels(values)
 
-        self._next_address = Space.rom.set_bytes(self.next_address, values)
-        if(self.next_address - 1 > self.end_address):
-            raise MemoryError(f"Not enough room in space \"{self.description}\": Next (0x{self.next_address -1:x}) > End (0x{self.end_address:x}). Diff: {(self.next_address - 1) - (self.end_address)}")
+        # validate bounds before writing so an overflow cannot corrupt bytes
+        # beyond the end of this space
+        last_address = self.next_address + len(values) - 1
+        if last_address > self.end_address:
+            raise RomSpaceError(f"Not enough room in space \"{self.description}\": Next (0x{last_address:x}) > End (0x{self.end_address:x}). Diff: {last_address - self.end_address}")
 
+        self._next_address = Space.rom.set_bytes(self.next_address, values)
         self._update_label_pointers()
 
     def clear(self, value):
         try:
             values = [value] * (len(self) // len(value))
-        except:
+        except TypeError:
+            # value is a single int (no len()), not a sequence
             values = [value] * len(self)
 
         values = self._invoke_callables(values)
-        assert len(self) == len(values) # do values evenly fill space?
+        if len(self) != len(values): # do values evenly fill space?
+            raise ValueError(f"clear: {len(values)} values do not evenly fill space {str(self)} ({len(self)} bytes)")
 
         Space.rom.set_bytes(self.start_address, values)
         self._next_address = self.start_address
 
-    def copy_from(self, start_address, end_address):
+    def copy_from(self, start_address: int, end_address: int) -> None:
         self.write(Space.rom.get_bytes(start_address, end_address - start_address + 1))
 
-    def add_label(self, name, address):
+    def add_label(self, name: str, address: int) -> None:
         self.labels[name] = Label(name)
         self.labels[name].address = address
 
@@ -129,6 +147,11 @@ class Space():
         return label_pointer # return a new pointer to a new label
 
     def _invoke_callables(self, values):
+        # expand instruction objects into their bytes. instructions (see
+        # instruction/asm.py) are callables: calling one with this space
+        # resolves it to a flat byte list (possibly containing LabelPointer
+        # placeholders). each instruction is also recorded by address in
+        # self.instructions so __repr__ can disassemble the space
         from utils.flatten import flatten
         result = []
         index = 0
@@ -146,6 +169,15 @@ class Space():
 
     def _parse_labels(self, values):
         # find labels (strs) in given values list and update the addresses of the labels and the label pointers
+        #
+        # labels support forward references in two passes:
+        # 1. here: a str value defines a label at the current address (and is
+        #    not written). a LabelPointer to a label already defined in this
+        #    space is resolved to bytes immediately; one not yet defined is
+        #    written as None placeholder bytes (16/24-bit) or left as the
+        #    LabelPointer object itself (8-bit, resolved lazily via __index__)
+        # 2. _update_label_pointers() (called after every write) overwrites
+        #    the placeholders once the target label has been defined
         index = 0
         new_values = []
         for value in values:
@@ -177,7 +209,8 @@ class Space():
                 new_values.append(value)
                 try:
                     index += len(value)
-                except:
+                except TypeError:
+                    # value is a single byte/int (no len())
                     index += 1
         return new_values
 
@@ -261,26 +294,26 @@ class Space():
     def printr(self):
         print(repr(self))
 
-def Reserve(start_address, end_address, description, clear_value = None):
+def Reserve(start_address: int, end_address: int, description: str, clear_value = None) -> Space:
     bank_start = (start_address // BANK_SIZE) * BANK_SIZE
     heap = Space.heaps[Bank(bank_start)]
     heap.reserve(start_address, end_address)
 
     return Space(start_address, end_address, description, clear_value)
 
-def Allocate(bank, size, description, clear_value = None):
+def Allocate(bank: Bank, size: int, description: str, clear_value = None) -> Space:
     heap = Space.heaps[bank]
     start_address = heap.allocate(size)
     end_address = start_address + size - 1
 
     return Space(start_address, end_address, description, clear_value)
 
-def Free(start_address, end_address):
+def Free(start_address: int, end_address: int) -> None:
     bank_start = (start_address // BANK_SIZE) * BANK_SIZE
     heap = Space.heaps[Bank(bank_start)]
     heap.free(start_address, end_address)
 
-def Write(destination, data, description):
+def Write(destination, data, description: str) -> Space:
     from utils.flatten import flatten
 
     size = 0
@@ -299,5 +332,5 @@ def Write(destination, data, description):
     space.write(data)
     return space
 
-def Read(start_address, end_address):
+def Read(start_address: int, end_address: int) -> list:
     return Space.rom.get_bytes(start_address, end_address - start_address + 1)

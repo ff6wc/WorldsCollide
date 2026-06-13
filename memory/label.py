@@ -1,5 +1,5 @@
 class Label:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
         self.address = None
 
@@ -15,7 +15,7 @@ class LabelPointer:
         self.address = address      # address of the pointer itself
         self.mode = mode            # absolute, relative, branch_relative
 
-    def __int__(self):
+    def __int__(self) -> int:
         value = self.label.address + self.offset
         if self.mode == self.RELATIVE:
             return value - self.address
@@ -23,15 +23,15 @@ class LabelPointer:
             return abs(value - self.address)
         elif self.mode == self.BRANCH_RELATIVE:
             value -= self.address
-            if value > 127 or value < -128:
-                raise ValueError(f"Error on Branch to label {self.label.name}. Branch distance: {value-1}")
-            if value > 0:
-                return value - 1
-            elif value < 0:
-                return value + 0xff
+            # branch offsets are relative to the pc after the one byte operand,
+            # so the encoded offset is (distance - 1) in two's complement and
+            # the reachable distance range is [-127, 128]
+            if value > 128 or value < -127:
+                raise ValueError(f"Error on Branch to label {self.label.name}. Branch distance: {value} not in [-127, 128]")
+            return (value - 1) % 256
         return value
 
-    def to_bytes(self, length, byteorder, *, signed = False):
+    def to_bytes(self, length: int, byteorder: str, *, signed: bool = False) -> bytes:
         return int(self).to_bytes(length, byteorder, signed = signed)
 
     def __index__(self):

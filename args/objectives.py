@@ -1,4 +1,8 @@
 from constants.objectives import MAX_OBJECTIVES, MAX_CONDITIONS
+import sys
+
+def name():
+    return "Objectives"
 
 def parse(parser):
     objectives = parser.add_argument_group("Objectives")
@@ -63,7 +67,6 @@ def process(args):
 
             for arg in result_args:
                 if arg not in result_type.value_range:
-                    import sys
                     args.parser.print_usage()
                     print(f"{sys.argv[0]}: error: {result_type.name}: invalid argument {arg}")
                     sys.exit(1)
@@ -92,7 +95,6 @@ def process(args):
 
                 for arg in condition_args:
                     if arg not in condition_type.value_range:
-                        import sys
                         args.parser.print_usage()
                         print(f"{sys.argv[0]}: error: {condition_type.name}: invalid argument {arg}")
                         sys.exit(1)
@@ -154,4 +156,4 @@ def log(args):
             lentries.append(entry)
 
     from log import section_entries
-    section_entries("Objectives", lentries, rentries)
+    section_entries(name(), lentries, rentries)

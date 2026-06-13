@@ -1,5 +1,6 @@
 from memory.space import Bank, START_ADDRESS_SNES, Reserve, Allocate, Write
 import instruction.asm as asm
+from constants.battle_addresses import ENEMY_LEVEL
 
 # 0xf0 custom argument values (e.g. FIRE1 = randomly choose from fire category with tier +1)
 FIRE0, FIRE1, FIRE2, ICE0, ICE1, ICE2, BOLT0, BOLT1, BOLT2, EARTH0, EARTH1, EARTH2, WIND0, WIND1, WIND2, WATER0, WATER1, WATER2, POISON0, POISON1, POISON2, PEARL0, PEARL1, PEARL2, NON_ELEMENTAL0, NON_ELEMENTAL1, NON_ELEMENTAL2 = range(0x36, 0x51)
@@ -190,7 +191,7 @@ class EnemyScriptCommands:
             asm.PHA(),                              # push index of tier 0 for category
 
             # add the enemy tier to the above category tier offset
-            asm.LDA(0x3b18, asm.ABS_Y),             # a = enemy's level
+            asm.LDA(ENEMY_LEVEL, asm.ABS_Y),        # a = enemy's level
             asm.CMP(int(ENEMY_LEVELS_PER_TIER * MAX_ENEMY_LEVEL_TIER), asm.IMM8),
             asm.BLT("TIER<MAX"),                    # branch if enemy tier is < max tier (no high level overflow)
             asm.LDA(MAX_ENEMY_LEVEL_TIER, asm.IMM8),# clamp enemy tier to max enemy tier
@@ -245,7 +246,7 @@ class EnemyScriptCommands:
             asm.SBC(SPECIAL0, asm.IMM8),            # convert argument to 0, 1, or 2
             asm.STA(0xee, asm.DIR),                 # $ee = argument tier
 
-            asm.LDA(0x3b18, asm.ABS_Y),             # a = enemy's level
+            asm.LDA(ENEMY_LEVEL, asm.ABS_Y),        # a = enemy's level
             asm.LDX(ENEMY_LEVELS_PER_SPECIAL_TIER, asm.IMM8),
             asm.JSR(c4.divide, asm.ABS),            # a = enemy's level / ENEMY_LEVELS_PER_SPECIAL_TIER
             asm.CMP(MAX_ENEMY_LEVEL_SPECIAL_TIER + 1, asm.IMM8),
