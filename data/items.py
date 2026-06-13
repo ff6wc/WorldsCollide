@@ -266,6 +266,13 @@ class Items():
         if self.args.no_priceless_items:
             self.assign_values()
 
+        # Item price modifications: apply price randomization first
+        if self.args.shop_prices_random_value:
+            self.random_prices_value()
+        elif self.args.shop_prices_random_percent:
+            self.random_prices_percent()
+
+        # Item price modifications: apply item price multipliers after
         if self.args.shops_expensive_breakable_rods:
             self.expensive_breakable_rods()
 
@@ -274,11 +281,6 @@ class Items():
 
         if self.args.shops_expensive_restorative_items:
             self.expensive_restorative_items()
-
-        if self.args.shop_prices_random_value:
-            self.random_prices_value()
-        elif self.args.shop_prices_random_percent:
-            self.random_prices_percent()
 
         for a_spell_id in self.args.remove_learnable_spell_ids:
             self.remove_learnable_spell(a_spell_id)
