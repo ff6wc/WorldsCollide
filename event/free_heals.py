@@ -164,7 +164,7 @@ def modify_inn_costs(maps, rom, dialogs, args):
     dialogs.set_text(FIGARO_DIALOG_ID,
         f"{figaro_price} GP per night!<line>Need a rest?<line><choice>(Yes)<line><choice>(No)<end>")
 
-    animation_src = [field.Read(0xa71d9, 0xa71dd), field.Branch(0xa71d4)]
+    animation_src = [Read(0xa71d9, 0xa71dd), field.Branch(0xa71d4)]
     space = Reserve(0xa71d9, 0xa71e8, "Figaro Castle Inn simplify", field.NOP())
     space.write(animation_src)
     animation_addr = space.start_address
