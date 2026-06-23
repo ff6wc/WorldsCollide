@@ -275,6 +275,71 @@ class Enemies():
 
         # NOTE: any remaining formations (due to extra_formations) are lost
 
+    def world_shuffle_encounters(self, maps):
+        import collections
+        # find all packs that are randomly encountered in zones
+        packs = collections.OrderedDict()
+        for zone in self.zones.zones:
+            if self.skip_shuffling_zone(maps, zone):
+                continue
+
+            for x in range(zone.PACK_COUNT):
+                if self.skip_shuffling_pack(zone.packs[x], zone.encounter_rates[x]):
+                    continue
+
+                packs[self.packs.packs[zone.packs[x]]] = None
+
+        # find all formations that are randomly encountered in packs
+        wob_formations = []
+        wor_formations = []
+        wob_packs = []
+        wor_packs = []
+        for pack in packs:
+            #check if this pack has wob or wor formations and stash the formations and pack in the apporiate lists
+            is_wob = self.formations.is_wob(pack.formations[0])
+            if is_wob:
+                wob_packs.append(pack)
+            else:
+                wor_packs.append(pack)
+            for y in range(pack.FORMATION_COUNT):
+                if self.skip_shuffling_formation(pack.formations[y]):
+                    continue
+
+                if pack.extra_formations[y]:
+                    # pack has extra formations (i.e. each formation is randomized with the subsequent 3 formations)
+                    # unfortunately, this means there are more formations than packs to put them in, so some formations are lost
+                    for x in range(4):
+                        if is_wob:
+                            wob_formations.append(pack.formations[y] + x)
+                        else:
+                            wor_formations.append(pack.formations[y] + x)
+                else:
+                    if is_wob:
+                        wob_formations.append(pack.formations[y])
+                    else:
+                        wor_formations.append(pack.formations[y])
+
+        # shuffle the randomly encounterable formations
+        import random
+        random.shuffle(wob_formations)
+        random.shuffle(wor_formations)
+
+        for pack in wob_packs:
+            for y in range(pack.FORMATION_COUNT):
+                if self.skip_shuffling_formation(pack.formations[y]):
+                    continue
+
+                pack.formations[y] = wob_formations.pop()
+
+        for pack in wor_packs:
+            for y in range(pack.FORMATION_COUNT):
+                if self.skip_shuffling_formation(pack.formations[y]):
+                    continue
+
+                pack.formations[y] = wor_formations.pop()
+
+        # NOTE: any remaining formations (due to extra_formations) are lost
+
     def chupon_encounters(self, maps):
         # find all packs that are randomly encountered in zones
         packs = []
@@ -305,6 +370,28 @@ class Enemies():
                 packs.append(zone.packs[x])
 
         self.packs.randomize_packs(packs, boss_percent)
+
+    def randomize_encounters_by_world(self, maps):
+        # find all packs that are randomly encountered in zones
+        wob_packs = []
+        wor_packs = []
+        boss_percent = self.args.random_encounters_world_random / 100.0
+        for zone in self.zones.zones:
+            if self.skip_shuffling_zone(maps, zone):
+                continue
+
+            for x in range(zone.PACK_COUNT):
+                if self.skip_shuffling_pack(zone.packs[x], zone.encounter_rates[x]):
+                    continue
+                pack = zone.packs[x]
+                is_wob = self.formations.is_wob(self.packs.packs[pack].formations[0])
+                if is_wob:
+                    wob_packs.append(pack)
+                else:
+                    wor_packs.append(pack)
+
+        self.packs.randomize_wob_packs(wob_packs, boss_percent)
+        self.packs.randomize_wor_packs(wor_packs, boss_percent)
 
     def randomize_loot(self):
         for enemy in self.enemies:
@@ -416,6 +503,10 @@ class Enemies():
             self.shuffle_encounters(maps)
         elif self.args.random_encounters_chupon:
             self.chupon_encounters(maps)
+        elif self.args.random_encounters_world_shuffle:
+            self.world_shuffle_encounters(maps)
+        elif self.args.random_encounters_world_random is not None:
+            self.randomize_encounters_by_world(maps)
         elif not self.args.random_encounters_original:
             self.randomize_encounters(maps)
 

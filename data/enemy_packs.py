@@ -281,6 +281,68 @@ class EnemyPacks():
                     # TODO: update get_random_normal to use more of the otherwise unused Fixed encounters
                     self.packs[pack_id].formations[formation_index] = formation
 
+    def randomize_wob_packs(self, packs, boss_percent, no_phunbaba3 = False):
+        exclude_bosses = []
+        if no_phunbaba3 or not self.args.shuffle_random_phunbaba3:
+            exclude_bosses += [self.formations.PHUNBABA3]
+        if not self.args.doom_gaze_no_escape:
+            exclude_bosses += [self.formations.DOOM_GAZE]
+
+        # We only want statues and dragons to show up when they are intentionally
+        #   mixed into the general boss pool
+        # Statues are currently seen as normal bosses in regards to scaling,
+        #   but the long-term goal is to add their own scaling option so it
+        #   makes most sense to begin treating these similarly to dragons.
+        if self.args.statue_boss_location != bosses.BossLocations.MIX:
+            exclude_bosses += self.formations.ALL_STATUES
+
+        # This is more futureproofing in the event we consolidate dragons in the future
+        if self.args.dragon_boss_location != bosses.BossLocations.MIX:
+            exclude_bosses += self.formations.ALL_DRAGONS
+
+        import random
+        for pack_id in packs:
+            if random.random() < boss_percent:
+                formation = self.formations.get_random_wob_boss(exclude_bosses) # outside of the below for loop, this ensures that there's no variability within fixed encounters within the same seed
+                for formation_index in range(self.packs[pack_id].FORMATION_COUNT):
+                    self.packs[pack_id].formations[formation_index] = formation
+            else:
+                formation = self.formations.get_random_wob_normal() # outside of the below for loop, this ensures that there's no variability within fixed encounters within the same seed
+                for formation_index in range(self.packs[pack_id].FORMATION_COUNT):
+                    # TODO: update get_random_normal to use more of the otherwise unused Fixed encounters
+                    self.packs[pack_id].formations[formation_index] = formation
+
+    def randomize_wor_packs(self, packs, boss_percent, no_phunbaba3 = False):
+        exclude_bosses = []
+        if no_phunbaba3 or not self.args.shuffle_random_phunbaba3:
+            exclude_bosses += [self.formations.PHUNBABA3]
+        if not self.args.doom_gaze_no_escape:
+            exclude_bosses += [self.formations.DOOM_GAZE]
+
+        # We only want statues and dragons to show up when they are intentionally
+        #   mixed into the general boss pool
+        # Statues are currently seen as normal bosses in regards to scaling,
+        #   but the long-term goal is to add their own scaling option so it
+        #   makes most sense to begin treating these similarly to dragons.
+        if self.args.statue_boss_location != bosses.BossLocations.MIX:
+            exclude_bosses += self.formations.ALL_STATUES
+
+        # This is more futureproofing in the event we consolidate dragons in the future
+        if self.args.dragon_boss_location != bosses.BossLocations.MIX:
+            exclude_bosses += self.formations.ALL_DRAGONS
+
+        import random
+        for pack_id in packs:
+            if random.random() < boss_percent:
+                formation = self.formations.get_random_wor_boss(exclude_bosses) # outside of the below for loop, this ensures that there's no variability within fixed encounters within the same seed
+                for formation_index in range(self.packs[pack_id].FORMATION_COUNT):
+                    self.packs[pack_id].formations[formation_index] = formation
+            else:
+                formation = self.formations.get_random_wor_normal() # outside of the below for loop, this ensures that there's no variability within fixed encounters within the same seed
+                for formation_index in range(self.packs[pack_id].FORMATION_COUNT):
+                    # TODO: update get_random_normal to use more of the otherwise unused Fixed encounters
+                    self.packs[pack_id].formations[formation_index] = formation
+
     def chupon_packs(self, packs):
         # Replace all packs with the CHUPON formation
         for pack_id in packs:
@@ -332,6 +394,54 @@ class EnemyPacks():
 
         # same issue as replacing number 128 with phunbaba3 (removed party member reappears in party after mine cart ride)
         self.randomize_packs(mine_cart, boss_percent, no_phunbaba3 = True)
+
+    def randomize_fixed_by_world(self):
+        # TODO: assign each check enough unused "packs" to eliminate variability within the same seed
+        lete_river = [263, 264] # nautiloid, exocite, pterodon
+        imperial_camp = [272, 298, 300, 269, 270] # soldier, dogs, templar/soldier, final 3 battles
+        doma_wob = [299] # soldier
+        phantom_train = [303] # ghost (siegfried [365] unrandomized for style)
+        serpent_trench = [275, 276, 277, 410, 411, 412, 413] # anguiform, actaneon, aspik, unused, unused, unused, unused
+        narshe_battle = [278, 279, 280] # brown and green soldiers, rider
+        opera_house = [281, 414] # sewer rat/vermin, unused
+        vector = [257, 285, 284] # guards, garm, commando, protoarmor, pipsqueak
+        mine_cart = [297, 400] # mag roaders
+        imperial_base = [295, 296] # soldier and magitek
+        sealed_cave = [405] # ninja
+        burning_house = [301, 287, 415] # balloon (x4, x3), unused
+        iaf = [382, 416] # sky armor / spit fire, unused
+        floating_continent_escape = [397, 398, 399] # naughty
+        owzer_mansion = [402, 403, 407, 404] # dahling, nightshade, souldancer, still life
+        moogle_defense = [261] # vomammoth
+
+        self.fixed = lete_river + imperial_camp + doma_wob + phantom_train + serpent_trench + narshe_battle + opera_house + vector
+        self.fixed += mine_cart + imperial_base + sealed_cave + burning_house + iaf + floating_continent_escape + moogle_defense
+
+        boss_percent = self.args.fixed_encounters_world_random / 100.0
+
+        # fixed packs which are capable of handling bababreath
+        wob_phunbaba3_safe = imperial_camp + doma_wob + phantom_train + vector + imperial_base + sealed_cave
+        wob_phunbaba3_safe += burning_house + iaf + floating_continent_escape + owzer_mansion
+        wor_phunbaba3_safe = owzer_mansion
+        self.randomize_wob_packs(wob_phunbaba3_safe, boss_percent)
+        self.randomize_wor_packs(wor_phunbaba3_safe, boss_percent)
+
+        # for some reason, losing the party leader here makes the raft move very slowly after the battle
+        self.randomize_wob_packs(lete_river, boss_percent, no_phunbaba3 = True)
+
+        # bababreath on party leader before the caves causes party to be invisible on entry
+        # it also happens if first fight phunbaba3 and then another non-phunbaba3 battle before the cave
+        self.randomize_wob_packs(serpent_trench, boss_percent, no_phunbaba3 = True)
+
+        # special event instead of game over (move to save point and try again)
+        self.randomize_wob_packs(narshe_battle, boss_percent, no_phunbaba3 = True)
+        self.randomize_wob_packs(moogle_defense, boss_percent, no_phunbaba3 = True)
+
+        # special game over event does not refresh objects/party leader
+        self.randomize_wob_packs(opera_house, boss_percent, no_phunbaba3 = True)
+
+        # same issue as replacing number 128 with phunbaba3 (removed party member reappears in party after mine cart ride)
+        self.randomize_wob_packs(mine_cart, boss_percent, no_phunbaba3 = True)
 
     def _update_names(self):
         # generate names based on formations and enemies
@@ -412,8 +522,10 @@ class EnemyPacks():
 
         self.pad_enemy_packs() # keep this before randomized_fixed, as this pads with normal enemies, whereas that may add bosses
 
-        if not self.args.fixed_encounters_original:
+        if self.args.fixed_encounters_random is not None:
             self.randomize_fixed()
+        elif self.args.fixed_encounters_world_random is not None:
+            self.randomize_fixed_by_world()
 
         if not self.args.random_encounters_original:
             # if shuffled/randomized encounters, need to remove extra formations from floating continent
