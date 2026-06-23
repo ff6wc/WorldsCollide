@@ -55,7 +55,7 @@ class Event():
     def get_boss(self, original_boss_name, log_change = True):
         pack_id = self.enemies.get_event_boss(original_boss_name)
 
-        if (self.args.boss_battles_shuffle or self.args.boss_battles_random) and log_change:
+        if (self.args.boss_battles_shuffle or self.args.boss_battles_random or self.args.boss_battles_world_shuffle) and log_change:
             boss_name = self.enemies.packs.get_name(pack_id)
             self.log_change(original_boss_name, boss_name)
         return pack_id

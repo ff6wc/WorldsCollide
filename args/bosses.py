@@ -14,6 +14,8 @@ def parse(parser):
                         help = "Boss battles shuffled")
     bosses_battles.add_argument("-bbr", "--boss-battles-random", action = "store_true",
                         help = "Boss battles randomized")
+    bosses_battles.add_argument("-bbws", "--boss-battles-world-shuffle", action = "store_true",
+                        help = "Boss battles shuffled by world")
 
     dragons = bosses.add_mutually_exclusive_group()
     dragons.add_argument("-drloc", "--dragon-boss-location", default = DEFAULT_DRAGON_PROTOCOL, type = str.lower, choices = BossLocations.ALL,
@@ -41,7 +43,7 @@ def process(args):
         args.dragon_boss_location = BossLocations.MIX
         args.mix_bosses_dragons = None
     # if neither shuffling or randomizing bosses, and we try to mix the dragons/statues, simply shuffle them instead
-    vanilla_locations = not (args.boss_battles_shuffle or args.boss_battles_random)
+    vanilla_locations = not (args.boss_battles_shuffle or args.boss_battles_random or args.boss_battles_world_shuffle)
     if vanilla_locations and args.dragon_boss_location == BossLocations.MIX:
         args.dragon_boss_location = BossLocations.SHUFFLE
     if vanilla_locations and args.statue_boss_location == BossLocations.MIX:
@@ -54,6 +56,8 @@ def flags(args):
         flags += " -bbs"
     elif args.boss_battles_random:
         flags += " -bbr"
+    elif args.boss_battles_world_shuffle:
+        flags += " -bbws"
 
     if args.dragon_boss_location:
         flags += f" -drloc {args.dragon_boss_location}"
@@ -82,6 +86,8 @@ def options(args):
         boss_battles = "Shuffle"
     elif args.boss_battles_random:
         boss_battles = "Random"
+    elif args.boss_battles_world_shuffle:
+        boss_battles = "WShuffle"
 
     dragon_battles = DEFAULT_DRAGON_PROTOCOL
     if args.dragon_boss_location:

@@ -99,6 +99,52 @@ normal_pack_name = {
     401 : "MagiMaster",
 }
 
+wor_pack_name = {
+    338 : "SrBehemoth",
+    340 : "Tentacles",
+    341 : "Dullahan",
+    342 : "Chadarnook",
+    346 : "Stooges",
+    348 : "Wrexsoul",
+    349 : "Doom Gaze",
+    350 : "Hidon",
+    354 : "Doom",
+    355 : "Goddess",
+    356 : "Poltrgeist",
+    368 : "Atma",
+    370 : "Inferno",
+    373 : "Umaro",
+    375 : "Tritoch",
+    386 : "Phunbaba 3",
+    387 : "Phunbaba 4",
+    396 : "Guardian", # defeatable guardian in kefka's tower
+    401 : "MagiMaster",
+}
+
+wob_pack_name = {
+    262 : "Marshal",
+    274 : "Rizopas",
+    302 : "Leader",
+    313 : "Kefka (Narshe)",
+    320 : "Whelk",
+    322 : "Vargas",
+    323 : "TunnelArmr",
+    324 : "GhostTrain",
+    325 : "Dadaluma",
+    326 : "Ifrit/Shiva",
+    327 : "Cranes",
+    328 : "Number 024",
+    329 : "Number 128",
+    335 : "FlameEater",
+    336 : "AtmaWeapon",
+    337 : "Nerapa",
+    345 : "Air Force",
+    359 : "Ultros 1",
+    360 : "Ultros 2",
+    363 : "Ultros/Chupon",
+    381 : "Ultros 3",
+}
+
 #  These ids are repeated in normal_pack_name as well
 #  This is intentional as they are used to iterate over ALL bosses for things like objective conditions
 statue_pack_name = {
