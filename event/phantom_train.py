@@ -360,6 +360,9 @@ class PhantomTrain(Event):
         #space = Reserve(0xbb088, 0xbb09a, "phantom train restaurant skip other scenes")
         #space.clear(field.NOP())
 
+        if self.args.no_free_heals:
+            self.ruination_restaurant_mod()
+
     def ziegfried_mod(self):
         space = Reserve(0xbb809, 0xbb862, "phantom train before ziegfried appears", field.NOP())
 
@@ -497,3 +500,274 @@ class PhantomTrain(Event):
         space.write(
             field.BranchIfEventBitSet(event_bit.STOPPED_PHANTOM_TRAIN, random_destination),
         )
+    def ruination_restaurant_mod(self):
+        """
+        Modifies the Phantom Train restaurant for ruination mode.
+        Offers three meal choices with different effects:
+        - Cheap Meal (10 GP): Random effect (HP, MP, status cure, or negative status)
+        - Filling Meal (500 GP): Full HP, but 1/4 chance of poison/imp per character
+        - Chef's Special (2000 GP): Full heal (HP, MP, status)
+        """
+        import random as rng
+
+        # Prices
+        CHEAP_MEAL_PRICE = 10
+        FILLING_MEAL_PRICE = 500
+        CHEFS_SPECIAL_PRICE = 2000
+
+        # Dialog IDs
+        MENU_DIALOG_ID = 653
+        NOT_ENOUGH_GP_DIALOG = 2748
+        CHEAP_MEAL_DIALOG = 655
+        FILLING_MEAL_DIALOG = 656
+        CHEFS_SPECIAL_DIALOG = 657
+
+        # Party members
+        PARTY = [field_entity.PARTY0, field_entity.PARTY1, field_entity.PARTY2, field_entity.PARTY3]
+
+        # Status effects for healing
+        HEAL_STATUS = (field.Status.DEATH | field.Status.PETRIFY | field.Status.IMP |
+                       field.Status.VANISH | field.Status.POISON | field.Status.ZOMBIE |
+                       field.Status.DARKNESS)
+
+        # Set the dialog text for the 3-choice menu
+        # f"Care for something?<line>"
+        self.dialogs.set_text(MENU_DIALOG_ID,
+            f"<choice> Cheap Meal ({CHEAP_MEAL_PRICE} GP)<line>"
+            f"<choice> Filling Meal ({FILLING_MEAL_PRICE} GP)<line>"
+            f"<choice> Chef's Special ({CHEFS_SPECIAL_PRICE} GP)<line><choice> No, thanks<end>")
+
+        # Set common dialog texts
+        # self.dialogs.set_text(NOT_ENOUGH_GP_DIALOG, "You don't have enough GP!<end>")
+        self.dialogs.set_text(FILLING_MEAL_DIALOG, "HP restored!<end>")
+        self.dialogs.set_text(CHEFS_SPECIAL_DIALOG, "HP, MP, and status restored!<end>")
+
+        # Randomly pick the cheap meal effect at compile time (same as recovery springs, minus full heal)
+        CHEAP_MEAL_EFFECTS = {
+            "RECOVER_HP": ("HP restored!<end>", field.Flash.WHITE),
+            "RECOVER_MP": ("MP restored!<end>", field.Flash.BLUE),
+            "RECOVER_STATUS": ("Status ailments cured!<end>", field.Flash.WHITE),
+            "POISON": ("The food was poisoned!<end>", field.Flash.GREEN),
+            "IMP": ("The food turned you into Imps!<end>", field.Flash.GREEN),
+            "ZOMBIE": ("The food was cursed!<end>", field.Flash.GREEN),
+            "STONE": ("The food is petrifying!<end>", field.Flash.WHITE),
+            "REDUCE_TO_1_HP": ("The food drained your strength!<end>", field.Flash.RED),
+        }
+        cheap_meal_effect = rng.choice(list(CHEAP_MEAL_EFFECTS.keys()))
+        cheap_meal_message, flash_color = CHEAP_MEAL_EFFECTS[cheap_meal_effect]
+        self.dialogs.set_text(CHEAP_MEAL_DIALOG, cheap_meal_message)
+
+        # Build the cheap meal effect instructions
+        cheap_meal_instructions = []
+
+        if cheap_meal_effect == "RECOVER_HP":
+            for p in PARTY:
+                cheap_meal_instructions.append(field.RestoreHp(p, 0x7f))
+
+        elif cheap_meal_effect == "RECOVER_MP":
+            for p in PARTY:
+                cheap_meal_instructions.append(field.RestoreMp(p, 0x7f))
+
+        elif cheap_meal_effect == "RECOVER_STATUS":
+            for p in PARTY:
+                cheap_meal_instructions.append(field.RemoveStatusEffects(p, HEAL_STATUS))
+
+        elif cheap_meal_effect == "POISON":
+            cheap_meal_instructions.append(field.AddStatusEffects(field_entity.PARTY0, field.Status.POISON))
+            cheap_meal_instructions.extend([
+                field.BranchRandomly("SKIP_P1_POISON"),
+                field.AddStatusEffects(field_entity.PARTY1, field.Status.POISON),
+                "SKIP_P1_POISON",
+                field.BranchRandomly("SKIP_P2_POISON"),
+                field.AddStatusEffects(field_entity.PARTY2, field.Status.POISON),
+                "SKIP_P2_POISON",
+                field.BranchRandomly("SKIP_P3_POISON"),
+                field.AddStatusEffects(field_entity.PARTY3, field.Status.POISON),
+                "SKIP_P3_POISON",
+            ])
+
+        elif cheap_meal_effect == "IMP":
+            cheap_meal_instructions.append(field.AddStatusEffects(field_entity.PARTY0, field.Status.IMP))
+            cheap_meal_instructions.extend([
+                field.BranchRandomly("SKIP_P1_IMP"),
+                field.AddStatusEffects(field_entity.PARTY1, field.Status.IMP),
+                "SKIP_P1_IMP",
+                field.BranchRandomly("SKIP_P2_IMP"),
+                field.AddStatusEffects(field_entity.PARTY2, field.Status.IMP),
+                "SKIP_P2_IMP",
+                field.BranchRandomly("SKIP_P3_IMP"),
+                field.AddStatusEffects(field_entity.PARTY3, field.Status.IMP),
+                "SKIP_P3_IMP",
+            ])
+
+        elif cheap_meal_effect == "ZOMBIE":
+            cheap_meal_instructions.append(field.AddStatusEffects(field_entity.PARTY0, field.Status.ZOMBIE))
+            cheap_meal_instructions.extend([
+                field.BranchRandomly("SKIP_P1_ZOMBIE"),
+                field.AddStatusEffects(field_entity.PARTY1, field.Status.ZOMBIE),
+                "SKIP_P1_ZOMBIE",
+                field.BranchRandomly("SKIP_P2_ZOMBIE"),
+                field.AddStatusEffects(field_entity.PARTY2, field.Status.ZOMBIE),
+                "SKIP_P2_ZOMBIE",
+                field.BranchRandomly("SKIP_P3_ZOMBIE"),
+                field.AddStatusEffects(field_entity.PARTY3, field.Status.ZOMBIE),
+                "SKIP_P3_ZOMBIE",
+            ])
+
+        elif cheap_meal_effect == "STONE":
+            cheap_meal_instructions.append(field.AddStatusEffects(field_entity.PARTY0, field.Status.PETRIFY))
+            cheap_meal_instructions.extend([
+                field.BranchRandomly("SKIP_P1_STONE"),
+                field.AddStatusEffects(field_entity.PARTY1, field.Status.PETRIFY),
+                "SKIP_P1_STONE",
+                field.BranchRandomly("SKIP_P2_STONE"),
+                field.AddStatusEffects(field_entity.PARTY2, field.Status.PETRIFY),
+                "SKIP_P2_STONE",
+                field.BranchRandomly("SKIP_P3_STONE"),
+                field.AddStatusEffects(field_entity.PARTY3, field.Status.PETRIFY),
+                "SKIP_P3_STONE",
+            ])
+
+        elif cheap_meal_effect == "REDUCE_TO_1_HP":
+            # Subtract 2^14 HP (16384), which reduces to 1 HP minimum
+            for p in PARTY:
+                cheap_meal_instructions.append(field.RestoreHp(p, 0x80 | 0x0e))
+
+        # Build shared "not enough money" event first
+        waiter_leaves_addr = 0xbb03d
+        not_enough_money_src = [
+            field.ClearEventBit(event_bit.NOT_ENOUGH_GP),
+            field.Dialog(NOT_ENOUGH_GP_DIALOG),
+            field.Call(waiter_leaves_addr),
+            field.FreeMovement(),
+            field.Return(),
+        ]
+        space = Write(Bank.CB, not_enough_money_src, "ruination restaurant not enough money")
+        not_enough_money_addr = space.start_address
+
+        # Build CHEAP MEAL event code
+        cheap_meal_src = [
+            field.RemoveGP(CHEAP_MEAL_PRICE),
+            field.BranchIfEventBitSet(event_bit.NOT_ENOUGH_GP, not_enough_money_addr),
+            field.FlashScreen(flash_color),
+            field.PlaySoundEffect(233),
+            field.PauseUnits(30),
+            *cheap_meal_instructions,
+            field.Dialog(CHEAP_MEAL_DIALOG),
+            field.Call(waiter_leaves_addr),
+            field.FreeMovement(),
+            field.Return(),
+        ]
+        space = Write(Bank.CB, cheap_meal_src, "ruination restaurant cheap meal")
+        cheap_meal_addr = space.start_address
+
+        # Build FILLING MEAL event code (full HP, 1/4 chance poison or imp per character)
+        filling_meal_src = [
+            field.RemoveGP(FILLING_MEAL_PRICE),
+            field.BranchIfEventBitSet(event_bit.NOT_ENOUGH_GP, not_enough_money_addr),
+            field.FlashScreen(field.Flash.WHITE),
+            field.PlaySoundEffect(233),
+            field.PauseUnits(30),
+            # Restore HP
+            field.RestoreHp(field_entity.PARTY0, 0x7f),
+            field.RestoreHp(field_entity.PARTY1, 0x7f),
+            field.RestoreHp(field_entity.PARTY2, 0x7f),
+            field.RestoreHp(field_entity.PARTY3, 0x7f),
+
+            # 1/4 chance to apply poison or imp to each character
+            # Party member 0
+            field.BranchChance(0.75, "SKIP_P0_FILLING"),
+            field.BranchRandomly("P0_IMP"),
+            field.AddStatusEffects(field_entity.PARTY0, field.Status.POISON),
+            field.Branch("SKIP_P0_FILLING"),
+            "P0_IMP",
+            field.AddStatusEffects(field_entity.PARTY0, field.Status.IMP),
+            "SKIP_P0_FILLING",
+
+            # Party member 1
+            field.BranchChance(0.75, "SKIP_P1_FILLING"),
+            field.BranchRandomly("P1_IMP"),
+            field.AddStatusEffects(field_entity.PARTY1, field.Status.POISON),
+            field.Branch("SKIP_P1_FILLING"),
+            "P1_IMP",
+            field.AddStatusEffects(field_entity.PARTY1, field.Status.IMP),
+            "SKIP_P1_FILLING",
+
+            # Party member 2
+            field.BranchChance(0.75, "SKIP_P2_FILLING"),
+            field.BranchRandomly("P2_IMP"),
+            field.AddStatusEffects(field_entity.PARTY2, field.Status.POISON),
+            field.Branch("SKIP_P2_FILLING"),
+            "P2_IMP",
+            field.AddStatusEffects(field_entity.PARTY2, field.Status.IMP),
+            "SKIP_P2_FILLING",
+
+            # Party member 3
+            field.BranchChance(0.75, "SKIP_P3_FILLING"),
+            field.BranchRandomly("P3_IMP"),
+            field.AddStatusEffects(field_entity.PARTY3, field.Status.POISON),
+            field.Branch("SKIP_P3_FILLING"),
+            "P3_IMP",
+            field.AddStatusEffects(field_entity.PARTY3, field.Status.IMP),
+            "SKIP_P3_FILLING",
+
+            field.Dialog(FILLING_MEAL_DIALOG),
+            field.Call(waiter_leaves_addr),
+            field.FreeMovement(),
+            field.Return(),
+        ]
+        space = Write(Bank.CB, filling_meal_src, "ruination restaurant filling meal")
+        filling_meal_addr = space.start_address
+
+        # Build CHEF'S SPECIAL event code (full heal - calls original heal subroutine)
+        # The original heal subroutine is at $CACFBD
+        FULL_HEAL_SUBROUTINE = 0xCACFBD
+        chefs_special_src = [
+            field.RemoveGP(CHEFS_SPECIAL_PRICE),
+            field.BranchIfEventBitSet(event_bit.NOT_ENOUGH_GP, not_enough_money_addr),
+            field.FlashScreen(field.Flash.WHITE),
+            field.PlaySoundEffect(233),
+            field.PauseUnits(30),
+            field.Call(FULL_HEAL_SUBROUTINE),
+            field.Dialog(CHEFS_SPECIAL_DIALOG),
+            field.Call(waiter_leaves_addr),
+            field.FreeMovement(),
+            field.Return(),
+        ]
+        space = Write(Bank.CB, chefs_special_src, "ruination restaurant chef's special")
+        chefs_special_addr = space.start_address
+
+        # Now patch the original restaurant dialog (at 0xBB032) to use our new menu
+        # Original: CB/B032 displays dialog 0x028C and then branches at CB/B035
+        # We need to replace this with our 4-choice dialog and branch
+        new_menu_src = [
+            field.DialogBranch(MENU_DIALOG_ID,
+                               dest1=cheap_meal_addr,
+                               dest2=filling_meal_addr,
+                               dest3=chefs_special_addr,
+                               dest4=waiter_leaves_addr),
+            field.Return()
+        ]
+        space = Write(Bank.CB, new_menu_src, "phantom train ruination restaurant menu")
+        new_menu_addr = space.start_address
+        
+        space = Reserve(0xbb032, 0xbb03c, "phantom train ruination restaurant redirect", field.NOP())
+        space.write(
+            field.DialogBranch(0x28C,
+                               dest1=new_menu_addr,
+                               dest2=waiter_leaves_addr,
+                               top_of_screen=False,
+                               wait_for_input=True)
+        )
+
+        # Make the first waiter visit also branch to here, after arms animation.
+        space = Reserve(0xbb1b6, 0xbb1be, description='phantom train restaurant override first event')  # CB/B1B6: 10    Begin action queue for character $10 (NPC $10), 5 bytes long (Wait until complete)
+        src = [
+            field.SetEventBit(0x19d),  # Record that the first event happened
+            field.Branch(0xbb022),     # Go back to repeat event code
+            field.Return()
+        ]
+        space.write(src)
+        
+
+

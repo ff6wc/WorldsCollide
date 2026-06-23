@@ -183,6 +183,8 @@ All generated test data, output ROMs, log text files, and metadata manifests gen
   - Output test ROM: `tests/test_output.smc`
   - Output test Log: `tests/test_output.txt`
   - Manifest file: `tests/test_manifest.json`
+- **Unit Tests**: `tests/` also contains the committed unit test suite (`tests/test_*.py`) covering ROM-independent logic (memory allocation, label/branch encoding, compression, seeding, CLI parsing). Run it with `python3 -m unittest discover -s tests -v`; it requires no ROM file. CI (`.github/workflows/ci.yml`) runs it on every push/PR, plus a guard that rejects committed ROM-like files. Generated artifacts in `tests/` are gitignored (`*.smc`, `*.sfc`, `tests/*.txt`, `tests/*.json`); test source files are tracked.
+- **Memory Overflow Errors**: Space overflows raise `memory.errors.RomSpaceError` (a `MemoryError` subclass). Bounds are validated *before* writing, so an overflowing `space.write(...)` never corrupts adjacent ROM bytes.
 
 ---
 

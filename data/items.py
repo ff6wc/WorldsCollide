@@ -198,6 +198,17 @@ class Items():
     def expensive_super_balls(self):
         self.items[name_id["Super Ball"]].scale_price(2)
 
+    def expensive_restorative_items(self):
+        restoratives = {
+            3: ["Fenix Down", "Tonic", "Dried Meat", "Potion", "Tincture", "Ether",
+                "Sleeping Bag", "Tent", "Remedy", "Antidote", "Eyedrop",
+                "Echo Screen", "Soft", "Revivify", "Green Cherry"],
+            2: ["X-Potion", "X-Ether"]
+        }
+        for factor, names in restoratives.items():
+            for name in names:
+                self.items[name_id[name]].scale_price(factor)
+
     def assign_values(self):
         from data.item_custom_values import custom_values
         for item in self.items:
@@ -255,16 +266,21 @@ class Items():
         if self.args.no_priceless_items:
             self.assign_values()
 
+        # Item price modifications: apply price randomization first
+        if self.args.shop_prices_random_value:
+            self.random_prices_value()
+        elif self.args.shop_prices_random_percent:
+            self.random_prices_percent()
+
+        # Item price modifications: apply item price multipliers after
         if self.args.shops_expensive_breakable_rods:
             self.expensive_breakable_rods()
 
         if self.args.shops_expensive_super_balls:
             self.expensive_super_balls()
 
-        if self.args.shop_prices_random_value:
-            self.random_prices_value()
-        elif self.args.shop_prices_random_percent:
-            self.random_prices_percent()
+        if self.args.shops_expensive_restorative_items:
+            self.expensive_restorative_items()
 
         for a_spell_id in self.args.remove_learnable_spell_ids:
             self.remove_learnable_spell(a_spell_id)

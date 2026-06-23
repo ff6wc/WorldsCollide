@@ -35,6 +35,8 @@ def parse(parser):
                         help = "Undead status removed from bosses")
     bosses.add_argument("-bmkl", "--boss-marshal-keep-lobos", action = "store_true",
                         help = "Don't replace the Marshal's Lobos with randomized enemies")
+    bosses.add_argument("-oops", default = None, nargs = "?", const = "random", type = str,
+                        help = "Oops, all <boss>! Replace all bosses with the specified boss enemy ID or name, or \"random\".")
 
 def process(args):
     if args.mix_bosses_dragons:
@@ -46,6 +48,48 @@ def process(args):
         args.dragon_boss_location = BossLocations.SHUFFLE
     if vanilla_locations and args.statue_boss_location == BossLocations.MIX:
         args.statue_boss_location = BossLocations.SHUFFLE
+
+    if args.oops is not None:
+        import data.bosses as bosses
+        excluded_final_battle_ids = set(bosses.final_battle_enemy_name.keys())
+        excluded_final_battle_ids.remove(298) # Keep Kefka (Final) as valid!
+
+        # Build the set of valid boss IDs
+        valid_boss_ids = set()
+        for enemy_dict in [bosses.normal_enemy_name, bosses.dragon_enemy_name, bosses.statue_enemy_name, bosses.final_battle_enemy_name]:
+            valid_boss_ids.update(enemy_dict.keys())
+        valid_boss_ids.difference_update(excluded_final_battle_ids)
+
+        try:
+            # Try to parse as integer ID first
+            oops_id = int(args.oops)
+            if oops_id not in valid_boss_ids:
+                raise ValueError(f"Invalid boss ID: {oops_id}. Must be a valid boss enemy ID.")
+            args.oops = oops_id
+        except ValueError as e:
+            if "Invalid boss ID" in str(e):
+                raise e
+
+            # If not a valid integer ID, try to parse as normalized name
+            def normalize(name):
+                return "".join(c.lower() for c in name if c.isalnum())
+
+            name_to_id = {}
+            for enemy_dict in [bosses.normal_enemy_name, bosses.dragon_enemy_name, bosses.statue_enemy_name, bosses.final_battle_enemy_name]:
+                for eid, name in enemy_dict.items():
+                    if eid not in excluded_final_battle_ids:
+                        name_to_id[normalize(name)] = eid
+
+            normalized_input = normalize(args.oops)
+            if normalized_input in name_to_id:
+                args.oops = name_to_id[normalized_input]
+            elif normalized_input == "random":
+                args.oops = "random"
+            else:
+                raise ValueError(
+                    f"Invalid boss ID or name: '{args.oops}'. "
+                    f"Please check the enemy maps in data/bosses.py for correct names and IDs."
+                )
 
 def flags(args):
     flags = ""
@@ -73,6 +117,8 @@ def flags(args):
         flags += " -bnu"
     if args.boss_marshal_keep_lobos:
         flags += " -bmkl"
+    if args.oops is not None:
+        flags += f" -oops {args.oops}"
 
     return flags
 
@@ -91,6 +137,10 @@ def options(args):
     if args.statue_boss_location:
         statue_battles = args.statue_boss_location.capitalize()
 
+    oops = args.oops
+    if oops == "random":
+        oops = "Random"
+
     return [
         ("Boss Battles", boss_battles, "boss_battles"),
         ("Dragons", dragon_battles, "dragon_battles"),
@@ -101,6 +151,7 @@ def options(args):
         ("No Undead", args.boss_no_undead, "boss_no_undead"),
         ("Marshal Keep Lobos", args.boss_marshal_keep_lobos, "boss_marshal_keep_lobos"),
         ("Who's There?", args.who_there, "who_there"),
+        ("Oops All Boss ID", oops, "oops"),
     ]
 
 def menu(args):

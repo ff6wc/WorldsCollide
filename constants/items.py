@@ -355,3 +355,29 @@ premium_items = [
     "Exp. Egg",
 ]
 
+junk_weapons = [
+    "Dirk",
+    "MithrilKnife",
+    "MithrilBlade",
+    "RegalCutlass",
+    "Mithril Pike",
+    "Imperial",
+    "Ashura",
+    "Kotetsu",
+]
+
+junk_armor = [
+    "Buckler",
+    "Heavy Shld",
+    "Mithril Shld",
+    "Leather Hat",
+    "Hair Band",
+    "Plumed Hat",
+    "Bandana",
+    "Iron Helmet",
+    "Mithril Helm",
+    "LeatherArmor",
+    "Cotton Robe",
+    "Kung Fu Suit",
+    "Iron Armor",
+]

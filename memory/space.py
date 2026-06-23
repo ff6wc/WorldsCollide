@@ -1,6 +1,7 @@
 from memory.rom import ROM
 from memory.heap import Heap
 from memory.label import Label, LabelPointer
+from memory.errors import RomSpaceError
 
 from enum import IntEnum
 BANK_SIZE = 0x10000
@@ -80,17 +81,25 @@ class Space():
         values = self._invoke_callables(values)
         values = self._parse_labels(values)
 
-        self._next_address = Space.rom.set_bytes(self.next_address, values)
-        if(self.next_address - 1 > self.end_address):
-            raise MemoryError(f"Not enough room in space \"{self.description}\": Next (0x{self.next_address -1:x}) > End (0x{self.end_address:x}). Diff: {(self.next_address - 1) - (self.end_address)}")
+        # validate bounds before writing so an overflow cannot corrupt bytes
+        # beyond the end of this space
+        last_address = self.next_address + len(values) - 1
+        if last_address > self.end_address:
+            raise RomSpaceError(f"Not enough room in space \"{self.description}\": Next (0x{last_address:x}) > End (0x{self.end_address:x}). Diff: {last_address - self.end_address}")
 
+        self._next_address = Space.rom.set_bytes(self.next_address, values)
         self._update_label_pointers()
 
     def clear(self, value):
-        try:
-            values = [value] * (len(self) // len(value))
-        except:
+        # int-like fills (incl. IntEnum/IntFlag, whose len() returns a popcount
+        # on Python 3.11+) occupy one byte each.
+        if isinstance(value, int):
             values = [value] * len(self)
+        else:
+            try:
+                values = [value] * (len(self) // len(value))
+            except:
+                values = [value] * len(self)
 
         values = self._invoke_callables(values)
         assert len(self) == len(values) # do values evenly fill space?
@@ -175,10 +184,18 @@ class Space():
                 index += size
             else:
                 new_values.append(value)
-                try:
-                    index += len(value)
-                except:
+                # A flattened scalar byte value occupies one byte. int covers
+                # plain ints and IntEnum/IntFlag members (e.g. Flash, Status).
+                # NB: Python 3.11+ added len() to IntFlag (returns the popcount),
+                # so we must NOT use len() to size int-like values or the byte
+                # count desyncs and label pointers land at the wrong address.
+                if isinstance(value, int):
                     index += 1
+                else:
+                    try:
+                        index += len(value)
+                    except TypeError:
+                        index += 1
         return new_values
 
     def _update_label_pointers(self):
@@ -287,10 +304,15 @@ def Write(destination, data, description):
     data = flatten(data)
     for value in data:
         if not isinstance(value, str):
-            try:
-                size += len(value)
-            except TypeError:
+            # int-like values (incl. IntEnum/IntFlag, whose len() returns a
+            # popcount on Python 3.11+) occupy one byte each.
+            if isinstance(value, int):
                 size += 1
+            else:
+                try:
+                    size += len(value)
+                except TypeError:
+                    size += 1
 
     if isinstance(destination, Bank):
         space = Allocate(destination, size, description)

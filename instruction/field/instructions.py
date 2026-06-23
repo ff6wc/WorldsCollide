@@ -546,6 +546,14 @@ class FadeOutSong(_Instruction):
     def __str__(self):
         return super().__str__(self.args[0])
 
+class FadeInPreviousSong(_Instruction):
+    # Fade in the previously faded out song (opcode 0xF3)
+    def __init__(self, fade_time):
+        super().__init__(0xf3, fade_time)
+
+    def __str__(self):
+        return super().__str__(self.args[0])
+
 class PlaySoundEffect(_Instruction):
     def __init__(self, sound_effect_id):
         self.sound_effect_id = sound_effect_id
