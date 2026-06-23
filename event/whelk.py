@@ -16,9 +16,6 @@ class Whelk(Event):
         )
 
     def mod(self):
-        if self.reward.type == RewardType.NONE:
-            return
-
         self.dialog_mod()
         self.entrance_event_mod()
         self.cleanup_mod()

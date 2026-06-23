@@ -73,8 +73,8 @@ def compress(data):
 
     size = len(result) + 2
     if size > MAX_COMPRESS_SIZE:
-        print(f"Error: compress: data too large (compressed size {size} > 65535)")
-        size = MAX_COMPRESS_SIZE
+        # a wrong size header would silently corrupt the decompressed data
+        raise ValueError(f"compress: data too large (compressed size {size} > {MAX_COMPRESS_SIZE})")
     return list(size.to_bytes(2, "little")) + result
 
 def decompress(data):

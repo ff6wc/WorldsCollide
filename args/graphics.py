@@ -24,12 +24,49 @@ def parse(parser):
 
     graphics.add_argument("-who", "--who-there", action = "store_true",
                               help = "Who's There? Bosses look like Imps and have the name '??????'")
+    graphics.add_argument("-steve", "--steveify", type = str, nargs='?', const='Steve', default=None,
+                          help = "Steveify the seed: rename all characters, items, espers, magic, enemies, etc. to a given name (default: Steve)")
 
 def process(args):
     import graphics.palettes.palettes as palettes
     import graphics.portraits.portraits as portraits
     import graphics.sprites.sprites as sprites
     
+
+    if args.steveify is not None:
+        if isinstance(args.steveify, bool):
+            if args.steveify:
+                args.steveify = "STEVE"
+            else:
+                args.steveify = None
+        else:
+            args.steveify = args.steveify.strip()
+            steveify_upper = args.steveify.upper()
+            if steveify_upper in ("NONE", "FALSE"):
+                args.steveify = None
+            elif not args.steveify:
+                args.steveify = "STEVE"
+
+        if args.steveify is not None:
+            if len(args.steveify) > 6:
+                args.steveify = args.steveify[:6]
+
+    if args.character_names is not None:
+        args.names = args.character_names.split('.')
+        if len(args.names) != Characters.CHARACTER_COUNT:
+            raise ValueError(f"Invalid number of name arguments ({len(args.names)} should be {Characters.CHARACTER_COUNT})")
+
+        for index in range(len(args.names)):
+            if args.names[index]:
+                args.names[index] = args.names[index][ : Characters.NAME_SIZE]
+            else:
+                args.names[index] = Characters.DEFAULT_NAME[index]
+    else:
+        args.names = Characters.DEFAULT_NAME
+
+    if args.steveify is not None:
+        args.names = [args.steveify] * Characters.CHARACTER_COUNT
+
     args.palettes = []
     if args.character_palettes:
         args.palette_ids = [int(palette_id) for palette_id in args.character_palettes.split('.')]
@@ -94,7 +131,7 @@ def flags(args):
     if args.character_names:
         flags += " -name " + args.character_names
     if args.steveify:
-        flags += " -steve " + args.steveify
+        flags += f' -steve "{args.steveify}"'
     if args.character_palettes:
         flags += " -cpal " + args.character_palettes
     if args.character_portraits:

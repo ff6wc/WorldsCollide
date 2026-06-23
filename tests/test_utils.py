@@ -50,6 +50,14 @@ class TestCompression(unittest.TestCase):
         size = int.from_bytes(bytes(compressed[:2]), "little")
         self.assertEqual(size, len(compressed))
 
+    def test_oversized_output_raises(self):
+        # incompressible data grows ~9/8x when compressed; this used to
+        # print an error and return a truncated size header instead of raising
+        rng = random.Random(42)
+        data = [rng.randrange(256) for _ in range(60000)]
+        with self.assertRaises(ValueError):
+            compress(data)
+
 class TestIntersection(unittest.TestCase):
     def test_intersection_preserves_first_list_order(self):
         self.assertEqual(intersection([3, 1, 2, 5], [2, 3]), [3, 2])
