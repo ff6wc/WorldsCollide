@@ -522,6 +522,7 @@ class Enemies():
             asm.NOP(),
             asm.NOP(),
             asm.NOP(),
+            asm.NOP(),
         ]
         Write(0x01207b, patch_src, "who's there imp graphics loader hook")
 
