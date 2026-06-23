@@ -126,7 +126,7 @@ def flags(args):
     if args.character_names:
         flags += " -name " + args.character_names
     if args.steveify:
-        flags += " -steve " + args.steveify
+        flags += f' -steve "{args.steveify}"'
     if args.character_palettes:
         flags += " -cpal " + args.character_palettes
     if args.character_portraits:
