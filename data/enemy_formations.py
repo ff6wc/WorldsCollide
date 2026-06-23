@@ -215,14 +215,7 @@ class EnemyFormations():
                 break
 
         for formation in self.formations:
-            has_boss = False
-            for enemy_index in range(formation.ENEMY_CAPACITY):
-                if formation.enemy_slots & (1 << enemy_index):
-                    if formation.enemy_ids[enemy_index] in boss_enemy_ids:
-                        has_boss = True
-                        break
-
-            if has_boss:
+            if any(enemy_id in boss_enemy_ids for enemy_id in formation.enemies()):
                 # Set only the first slot (slot 0) as active to prevent multi-boss VRAM overlays
                 formation.enemy_slots = 1
 
