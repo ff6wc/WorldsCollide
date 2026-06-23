@@ -7,6 +7,7 @@ import menus.status as status
 import menus.final_lineup as final_lineup
 import menus.coliseum as coliseum
 import menus.sell as sell
+import menus.buy as buy
 import menus.magic as magic
 
 class Menus:
@@ -25,6 +26,7 @@ class Menus:
         self.final_lineup_menu = final_lineup.FinalLineupMenu(self.characters)
         self.coliseum_menu = coliseum.ColiseumMenu()
         self.sell_menu = sell.SellMenu()
+        self.buy_menu = buy.BuyMenu()
         self.magic_menu = magic.MagicMenu()
 
         self.scrollbar_bugfix()

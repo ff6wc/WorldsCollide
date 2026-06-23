@@ -18,6 +18,9 @@ class BarenFalls(Event):
         if self.args.character_gating:
             self.add_gating_condition()
 
+        if self.args.no_free_heals:
+            self.remove_free_heal_mod()
+
         self.rizopas_battle_mod()
         self.after_battle_mod()
         self.already_complete_mod()
@@ -185,3 +188,8 @@ class BarenFalls(Event):
         space.write(
             asm.STA(0xEC71, asm.ABS_X)
         )
+
+    def remove_free_heal_mod(self):
+        # Event beginning the battle has a free heal.  Remove it.
+        # CB/C0B2: B2    Call subroutine $CACFBD (heals all HP/MP/Statuses except M-Tek & Dog Block)
+        space = Reserve(0xbc0b2, 0xbc0b5, "Baren Falls remove free heal", field.NOP())

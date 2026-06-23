@@ -25,6 +25,9 @@ class CollapsingHouse(Event):
         if self.args.flashes_remove_most or self.args.flashes_remove_worst:
             self.flash_mod()
 
+        if self.args.no_free_heals:
+            self.no_free_heals_mod()
+
         if self.reward.type == RewardType.CHARACTER:
             self.character_mod(self.reward.id)
         elif self.reward.type == RewardType.ESPER:
@@ -210,3 +213,16 @@ class CollapsingHouse(Event):
         space.write(
             field.Call(finish_check),
         )
+
+    def no_free_heals_mod(self):
+        # Remove free heal from innkeeper during collapsing house event
+        # CC/5C9D: B2    Call subroutine $CCE499 (heals all HP/MP/Statuses except Dog Block)
+        space = Reserve(0xc5C9D, 0xc5Ca0, "Collapsing House remove free heal", field.NOP())
+
+        # Remove animation
+        # CC/5C95: 55    Flash screen with color component(s) 8 (Blue), at intensity 0
+        # CC/5C97: F4    Play sound effect 233
+        space = Reserve(0xc5c95, 0xc5c98, "Collapsing House remove free heal animaiton", field.NOP())
+
+        # Also change dialog, so it doesn't indicate a free heal
+        self.dialogs.set_text(0x08B3, "Please…go back inside and save that child!!<end>")

@@ -1,3 +1,5 @@
+from memory.errors import RomSpaceError
+
 class Block:
     def __init__(self, start, end):
         if start > end:
@@ -53,7 +55,7 @@ class Heap:
 
         block = find_best_fit(size)
         if block is None:
-            raise MemoryError(f"Unable to allocate block of size {size}")
+            raise RomSpaceError(f"Unable to allocate block of size {size}")
 
         start = block.start
         block.start += size

@@ -179,6 +179,57 @@ class EnemyFormations():
         if self.args.random_encounters_chupon:
             self.add_chupon()
 
+        if self.args.oops is not None:
+            self.oops_mod()
+
+    def oops_mod(self):
+        boss_enemy_ids = set()
+        import data.bosses as bosses
+        boss_enemy_ids.update(bosses.normal_enemy_name.keys())
+        boss_enemy_ids.update(bosses.dragon_enemy_name.keys())
+        boss_enemy_ids.update(bosses.statue_enemy_name.keys())
+        boss_enemy_ids.update(bosses.final_battle_enemy_name.keys())
+
+        # The user-selected target boss ID
+        target_boss_id = self.args.oops
+
+        if target_boss_id == "random":
+            import random
+            excluded_final_battle_ids = set(bosses.final_battle_enemy_name.keys())
+            excluded_final_battle_ids.remove(298) # Keep Kefka (Final) as valid!
+            valid_boss_ids = [eid for eid in bosses.enemy_name.keys() if eid not in excluded_final_battle_ids and eid not in bosses.removed_enemy_name]
+            target_boss_id = random.choice(valid_boss_ids)
+            self.args.oops = target_boss_id
+
+        boss_name = bosses.enemy_name.get(target_boss_id)
+
+        if self.args.spoiler_log:
+            from log import section
+            section("Oops All Bosses", [f"    Boss: {boss_name} (ID {target_boss_id})"], [])
+
+        # Find the native mold of the chosen boss from any formation containing it
+        target_mold = None
+        for formation in self.formations:
+            if target_boss_id in formation.enemies():
+                target_mold = formation.mold
+                break
+
+        for formation in self.formations:
+            if any(enemy_id in boss_enemy_ids for enemy_id in formation.enemies()):
+                # Set only the first slot (slot 0) as active to prevent multi-boss VRAM overlays
+                formation.enemy_slots = 1
+
+                # Set slot 0's enemy ID to the target boss ID
+                formation.enemy_ids[0] = target_boss_id
+
+                # Center the single boss perfectly on screen (y = 5, x = 6)
+                formation.enemy_y_positions[0] = 5
+                formation.enemy_x_positions[0] = 6
+
+                # Apply the native mold for correct VRAM layout & rendering
+                if target_mold is not None:
+                    formation.mold = target_mold
+
     def print_scripts(self):
         for formation_index, formation in enumerate(self.formations):
             if formation.enable_event_script:
