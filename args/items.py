@@ -55,6 +55,7 @@ def parse(parser):
                        help="All weapons enable swdtech and runic")
     items.add_argument("-saw", "--stronger-atma-weapon", action="store_true",
                        help="Atma Weapon moved to higher tier and divisor reduced from 64 to 32")
+    items.add_argument("-exi", "--exclude-items", type=str, help="Items to exclude from shops and chests.  Doesn't affect drops.  Separate with periods")
 
 
 def process(args):
@@ -177,6 +178,8 @@ def flags(args):
 
     if args.stronger_atma_weapon:
         flags += " -saw"
+    if args.exclude_items:
+        flags += f" -exi {args.exclude_items}"
 
     return flags
 
