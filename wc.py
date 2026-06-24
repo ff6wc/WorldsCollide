@@ -23,6 +23,9 @@ def main():
     from bug_fixes import BugFixes
     bug_fixes = BugFixes()
 
+    from balance_adjustments import BalanceAdjustments
+    balance_adjustments = BalanceAdjustments()
+
     data.write()
     memory.write()
 
