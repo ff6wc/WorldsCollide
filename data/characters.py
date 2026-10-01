@@ -31,6 +31,7 @@ class Characters():
     def __init__(self, rom, args, spells):
         self.rom = rom
         self.args = args
+        self.start_levels = None    # per-character levels when -stlr is used
 
         self.init_data = DataArray(self.rom, self.INIT_DATA_START, self.INIT_DATA_END, self.INIT_DATA_SIZE)
         self.name_data = DataArray(self.rom, self.NAMES_START, self.NAMES_END, self.NAME_SIZE)
@@ -86,7 +87,21 @@ class Characters():
         for character in self.characters:
             character.init_level_factor = 0
 
-        characters_asm.set_starting_level(self.args.start_level)
+        if self.args.start_level_random:
+            import random
+            self.start_levels = [random.randint(self.args.start_level_random_min,
+                                                self.args.start_level_random_max)
+                                 for _ in range(self.CHARACTER_COUNT)]
+            characters_asm.set_random_starting_levels(self.start_levels, self.args.start_level)
+        else:
+            characters_asm.set_starting_level(self.args.start_level)
+
+    def log_start_levels(self):
+        from log import section, format_option
+        entries = [format_option(self.DEFAULT_NAME[character].capitalize(), level)
+                   for character, level in enumerate(self.start_levels)]
+        half = (len(entries) + 1) // 2
+        section("Starting Levels", entries[:half], entries[half:])
 
     def stats_random_percent(self):
         import random
@@ -148,6 +163,8 @@ class Characters():
     def write(self):
         if self.args.spoiler_log:
             self.commands.log()
+            if self.start_levels:
+                self.log_start_levels()
 
         for character_index in range(len(self.characters)):
             self.init_data[character_index] = self.characters[character_index].init_data()
