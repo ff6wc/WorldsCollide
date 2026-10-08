@@ -11,6 +11,52 @@ def set_starting_level(start_level):
     space = Reserve(0x09fc6, 0x09fc6, "Starting level")
     space.write(start_level.to_bytes(1, 'little'))
 
+def set_random_starting_levels(levels, default_level):
+    """Give each character slot its own starting level.
+
+    C0/9F78 returns the average level of the available characters, or the
+    starting-level constant (C0/9FC5 LDA #$03, which -stl patches) when no
+    character is available yet. Every character is initialized that way at
+    game start (event/start.py sets properties for all 14 before anyone is
+    recruited), so replacing that constant with a lookup by character slot
+    ($eb) gives each character its own level. Once anyone is available the
+    routine averages exactly as before.
+
+    levels: one level per playable character (slots 0-13); the remaining
+    slots (guests) and any out-of-range slot use default_level."""
+    SLOT_COUNT = 16
+    table = list(levels) + [default_level] * (SLOT_COUNT - len(levels))
+
+    space = Allocate(Bank.C0, len(table), "random starting levels by character slot")
+    space.write(bytes(table))
+    table_address = space.start_address_snes
+
+    src = [
+        asm.TDC(),                              # a = 0 (clears high byte for tax)
+        asm.LDA(0xeb, asm.DIR),                 # a = character slot
+        asm.CMP(SLOT_COUNT, asm.IMM8),
+        asm.BGE("DEFAULT"),
+        asm.TAX(),                              # x = character slot (16 bit index)
+        asm.LDA(table_address, asm.LNG_X),      # a = this character's starting level
+        asm.RTS(),
+
+        "DEFAULT",
+        asm.LDA(default_level, asm.IMM8),
+        asm.RTS(),
+    ]
+    space = Write(Bank.C0, src, "random starting level lookup")
+    lookup = space.start_address
+
+    # C0/9FC3: BRA $9FC7 (clamp the average to 99) / C0/9FC5: LDA #$03 (no one available).
+    # An average of levels is never above 99, so return it directly, and send the
+    # no-one-available case to the lookup (its levels are already 3-99).
+    space = Reserve(0x09fc3, 0x09fc7, "starting level: return average or per-character level")
+    space.write(
+        asm.RTS(),
+        asm.NOP(),
+        asm.JMP(lookup, asm.ABS),
+    )
+
 def update_morph_character(characters):
     from constants.commands import id_name
 
