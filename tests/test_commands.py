@@ -257,6 +257,165 @@ print("ok")
 """
 
 
+# unique is unique across the seed. every skill declared (morph roll-only),
+# possess excluded: 13 skill slots from 19 backfillable skills, so no skill may
+# ever sit on two characters -- rolled or backfilled.
+PRU_SEED_UNIQUE = """
+import sys, types, collections
+sys.argv = ["wc.py", "-i", "rom.smc", "-compru",
+            "00.02.01.10.06.14.19.24.26.22.12.29.03.16.11.27.13.15.05.07.08.09.23",
+            "100.100.100.12.10.10.12.12.10.12.12.12.11.12.10.2.10.12.10.12.12.12.12", "-rec", "28"]
+import args
+sys.modules["objectives"] = types.ModuleType("objectives")
+sys.modules["objectives"].suplex_train_condition_exists = False
+
+from constants.commands import name_id
+from data.commands import Commands
+
+COMMON = {name_id["Fight"], name_id["Magic"], name_id["Item"], name_id["None"]}
+
+class FakeChar:
+    def __init__(self):
+        self.commands = [0, 0, 0, 0]
+
+for trial in range(500):
+    chars = [FakeChar() for _ in range(0x20)]
+    c = Commands(chars)
+    c.mod_probability_random_commands()
+    skills = collections.Counter(x for i in c.full_random_characters()
+                                 for x in chars[i].commands if x not in COMMON)
+    assert sum(skills.values()) == 13, skills
+    assert max(skills.values()) == 1, f"skill dealt twice: {skills}"
+    assert name_id["Possess"] not in skills, skills
+print("ok")
+"""
+
+# a 100% skill under -compru goes to one character (until the pool runs dry),
+# not to everyone; the characters roll in a random order, so the holder varies.
+PRU_ROLLED_ONCE = """
+import sys, types
+sys.argv = ["wc.py", "-i", "rom.smc", "-compru", "0.2.1.5", "100.100.100.100"]
+import args
+sys.modules["objectives"] = types.ModuleType("objectives")
+sys.modules["objectives"].suplex_train_condition_exists = False
+
+from constants.commands import name_id
+from data.commands import Commands
+
+STEAL = name_id["Steal"]
+
+class FakeChar:
+    def __init__(self):
+        self.commands = [0, 0, 0, 0]
+
+holders = set()
+for trial in range(300):
+    chars = [FakeChar() for _ in range(0x20)]
+    c = Commands(chars)
+    c.mod_probability_random_commands()
+    with_steal = [i for i in c.full_random_characters() if STEAL in chars[i].commands]
+    assert len(with_steal) == 1, f"steal on {with_steal}"
+    holders.update(with_steal)
+assert len(holders) > 1, f"steal holder should vary, always {holders}"
+print("ok")
+"""
+
+# 48 skill slots (-comfru 0.0.0) from 21 skills: the pool cycles, and no skill
+# is dealt again while another legal skill has been dealt fewer times.
+FRU_POOL_CYCLES = """
+import sys, types, collections
+sys.argv = ["wc.py", "-i", "rom.smc", "-comfru", "0.0.0", "-rec", "28"]
+import args
+sys.modules["objectives"] = types.ModuleType("objectives")
+sys.modules["objectives"].suplex_train_condition_exists = False
+
+from constants.commands import name_id, RANDOM_POSSIBLE_COMMANDS
+from data.commands import Commands
+
+MORPH, NONE = name_id["Morph"], name_id["None"]
+LEGAL = {name_id[n] for n in RANDOM_POSSIBLE_COMMANDS} - {name_id["Possess"], MORPH}
+
+class FakeChar:
+    def __init__(self):
+        self.commands = [0, 0, 0, 0]
+
+for trial in range(300):
+    chars = [FakeChar() for _ in range(0x20)]
+    c = Commands(chars)
+    c.mod_probability_random_commands()
+    skills = collections.Counter(x for i in c.full_random_characters()
+                                 for x in chars[i].commands if x != NONE)
+    assert skills[MORPH] <= 1, skills
+    counts = [skills[x] for x in LEGAL]
+    assert max(counts) - min(counts) <= 1, f"a skill was dealt again before another caught up: {skills}"
+print("ok")
+"""
+
+# rolls and draft share one count: five skills at 100% roll first, the draft
+# fills the rest of the 48 slots, and every legal skill stays within one deal
+# of every other (a rolled skill counted twice would fall behind).
+PRU_POOL_CYCLES = """
+import sys, types, collections
+sys.argv = ["wc.py", "-i", "rom.smc", "-compru", "5.6.7.8.9", "100.100.100.100.100",
+            "-comfru", "0.0.0", "-rec", "28"]
+import args
+sys.modules["objectives"] = types.ModuleType("objectives")
+sys.modules["objectives"].suplex_train_condition_exists = False
+
+from constants.commands import name_id, RANDOM_POSSIBLE_COMMANDS
+from data.commands import Commands
+
+MORPH, NONE = name_id["Morph"], name_id["None"]
+LEGAL = {name_id[n] for n in RANDOM_POSSIBLE_COMMANDS} - {name_id["Possess"], MORPH}
+
+class FakeChar:
+    def __init__(self):
+        self.commands = [0, 0, 0, 0]
+
+for trial in range(300):
+    chars = [FakeChar() for _ in range(0x20)]
+    c = Commands(chars)
+    c.mod_probability_random_commands()
+    skills = collections.Counter(x for i in c.full_random_characters()
+                                 for x in chars[i].commands if x != NONE)
+    counts = [skills[x] for x in LEGAL]
+    assert max(counts) - min(counts) <= 1, f"rolled and drafted skills out of step: {skills}"
+print("ok")
+"""
+
+# unique slots never repeat any skill already in the seed: terra's explicit
+# steal and locke's random (99) pick are both off limits to the 98 draws.
+COMPOSED_UNIQUE = """
+import sys, types, collections
+sys.argv = ["wc.py", "-i", "rom.smc",
+            "-com", "05999898989898989898989898", "-comfru", "100.100.100"]
+import args
+sys.modules["objectives"] = types.ModuleType("objectives")
+sys.modules["objectives"].suplex_train_condition_exists = False
+
+from constants.commands import name_id
+from data.commands import Commands
+
+COMMON = {name_id["Fight"], name_id["Magic"], name_id["Item"], name_id["None"]}
+
+class FakeChar:
+    def __init__(self):
+        self.commands = [0, 0, 0, 0]
+
+for trial in range(300):
+    chars = [FakeChar() for _ in range(0x20)]
+    c = Commands(chars)
+    c.mod_probability_random_commands()
+    skills = [x for i in c.full_random_characters() for x in chars[i].commands if x not in COMMON]
+    assert len(skills) == 13, skills
+    terra_and_locke = [x for i in (0, 1) for x in chars[i].commands if x not in COMMON]
+    drafted = [x for i in c.full_random_characters()[2:] for x in chars[i].commands if x not in COMMON]
+    assert len(set(drafted)) == len(drafted), f"98 draws repeated: {drafted}"
+    assert not set(drafted) & set(terra_and_locke), f"98 repeated an earlier pick: {skills}"
+print("ok")
+"""
+
+
 class TestCommandsFlag(unittest.TestCase):
     def assert_accepted(self, *flags, expected = None):
         result = parse_flags(*flags)
@@ -363,7 +522,9 @@ class TestCommandsFlag(unittest.TestCase):
         for name, script in (("pr", PR_INVARIANTS), ("cap", PR_CAP_INVARIANTS),
                              ("none", PR_NONE_INVARIANTS), ("morph", PR_MORPH_INVARIANTS),
                              ("morph_partywide", PR_MORPH_PARTYWIDE),
-                             ("composed", COMPOSED_INVARIANTS)):
+                             ("composed", COMPOSED_INVARIANTS),
+                             ("pru_seed_unique", PRU_SEED_UNIQUE), ("pru_rolled_once", PRU_ROLLED_ONCE),
+                             ("fru_pool_cycles", FRU_POOL_CYCLES), ("pru_pool_cycles", PRU_POOL_CYCLES), ("composed_unique", COMPOSED_UNIQUE)):
             with self.subTest(name):
                 result = subprocess.run(
                     [sys.executable, "-c", script],
