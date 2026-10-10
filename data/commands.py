@@ -27,6 +27,11 @@ class UniquePool:
         if command == name_id["Morph"]:
             self.retire(command) # only one character gets morph
 
+    def give_back(self, command):
+        # a dealt command was taken off its character again
+        if self.dealt.get(command, 0) > 0:
+            self.dealt[command] -= 1
+
     def retire(self, command):
         # never deal this command again
         if command in self.legal:
@@ -192,23 +197,42 @@ class Commands:
 
         return skills
 
-    def guarantee_blitz(self, characters, skills):
-        # if suplex a train condition exists, guarantee blitz
+    def guarantee_blitz(self, characters, held, random_fill, unique_fill, rolled, pool):
+        # if suplex a train condition exists, guarantee blitz (even if blitz is in the
+        # excluded commands). runs before the backfill: when no character holds blitz
+        # yet (explicit pick or roll), deal it into one open backfill slot, which the
+        # fills and the unique pool's counts then account for. returns the blitz dealt
+        # per character, which the caller adds to that character's skills.
         import objectives
         blitz_id = name_id["Blitz"]
+        forced = {character : [] for character in characters}
 
         if not objectives.suplex_train_condition_exists:
-            return
-        if any(blitz_id in skills[character] for character in characters):
-            return
+            return forced
+        if any(blitz_id in held[character] for character in characters):
+            return forced
 
-        # replace a random skill slot with blitz (even if blitz is in the excluded commands)
-        possible_characters = [character for character in characters if skills[character]]
-        if not possible_characters:
-            return
+        open_characters = [character for character in characters
+                           if random_fill[character] + unique_fill[character] > 0]
+        if open_characters:
+            character = random.choice(open_characters)
+            fill = random.choice([random_fill] * random_fill[character]
+                                 + [unique_fill] * unique_fill[character])
+            fill[character] -= 1
+            forced[character].append(blitz_id)
+            pool.take(blitz_id)
+            return forced
 
-        character = random.choice(possible_characters)
-        skills[character][random.randrange(len(skills[character]))] = blitz_id
+        # every slot was rolled or picked: replace a rolled skill (not an explicit pick)
+        replaceable = [(character, index) for character in characters
+                       for index, command in enumerate(rolled[character])
+                       if command in pool.tracked and command != name_id["Morph"]]
+        if replaceable:
+            character, index = random.choice(replaceable)
+            pool.give_back(rolled[character][index])
+            rolled[character][index] = blitz_id
+            pool.take(blitz_id)
+        return forced
 
     def roll_probability_commands(self, character, capacity, held, pool = None):
         # roll one character's slots from the declared (command, percent) list
@@ -378,9 +402,13 @@ class Commands:
             else:
                 random_fill[character] += leftover
 
+        # suplex a train: blitz claims a backfill slot first if nobody holds it
+        held = {character : explicit[character] + rolled[character] for character in characters}
+        forced = self.guarantee_blitz(characters, held, random_fill, unique_fill, rolled, pool)
+
         # random fills first (as with -com, a 98 never repeats a 99's pick),
         # then the unique draft from whatever the pool has left
-        taken = {character : explicit[character]
+        taken = {character : explicit[character] + forced[character]
                  + [command for command in rolled[character] if command != NONE_COMMAND]
                  for character in characters}
         randomed = self.random_skills(characters, random_fill, available, taken)
@@ -390,8 +418,8 @@ class Commands:
         taken = {character : taken[character] + randomed[character] for character in characters}
         drafted = self.draft_skills(characters, unique_fill, available, taken, pool)
 
-        skills = {character : drafted[character] + randomed[character] for character in characters}
-        self.guarantee_blitz(characters, skills)
+        skills = {character : forced[character] + drafted[character] + randomed[character]
+                  for character in characters}
 
         # apply the commands in menu order: fight -> skills -> magic -> item,
         # with explicit picks ahead of rolled skills ahead of backfilled ones

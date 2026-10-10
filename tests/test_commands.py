@@ -416,6 +416,58 @@ print("ok")
 """
 
 
+# suplex a train guarantees one blitz, but never a second one: blitz already
+# rolled or picked explicitly counts, the forced blitz takes a backfill slot (so
+# unique seeds stay unique), and with no backfill slot left a rolled skill gives
+# way. run with the objective switched on; FLAGS and ONE_HOLDER are filled in.
+SUPLEX_BLITZ = """
+import sys, types, collections
+sys.argv = ["wc.py", "-i", "rom.smc"] + FLAGS
+import args
+sys.modules["objectives"] = types.ModuleType("objectives")
+sys.modules["objectives"].suplex_train_condition_exists = True
+
+from constants.commands import name_id
+from data.commands import Commands
+
+BLITZ, NONE = name_id["Blitz"], name_id["None"]
+COMMON = {name_id["Fight"], name_id["Magic"], name_id["Item"], NONE}
+
+class FakeChar:
+    def __init__(self):
+        self.commands = [0, 0, 0, 0]
+
+for trial in range(300):
+    chars = [FakeChar() for _ in range(0x20)]
+    c = Commands(chars)
+    c.mod_probability_random_commands()
+    menus = [chars[i].commands for i in c.full_random_characters()]
+    holders = [menu.count(BLITZ) for menu in menus if BLITZ in menu]
+    assert holders, f"no blitz: {menus}"
+    assert max(holders) == 1, f"blitz twice on one character: {menus}"
+    if ONE_HOLDER:
+        assert len(holders) == 1, f"blitz on {len(holders)} characters: {menus}"
+    assert all(NONE not in menu for menu in menus), f"slot left empty: {menus}"
+    if UNIQUE:
+        skills = collections.Counter(x for menu in menus for x in menu if x not in COMMON)
+        assert max(skills.values()) == 1, f"skill dealt twice: {skills}"
+print("ok")
+"""
+
+SUPLEX_CASES = (
+    # declared blitz at 100% under -compru: rolled once, never forced again
+    ("rolled", ["-compru", "10", "100", "-comfru", "100.100.100"], True, True),
+    # explicit -com blitz for terra plus unique backfill
+    ("explicit", ["-com", "10989898989898989898989898", "-comfru", "100.100.100"], True, True),
+    # blitz excluded from backfill is still forced in, into a backfill slot
+    ("excluded", ["-comfru", "100.100.100", "-rec", "10"], True, True),
+    # every slot rolled at 100%: a rolled skill gives way to the forced blitz
+    ("no_backfill", ["-compr", "00.02.01.05.06", "100.100.100.100.100", "-rec", "10"], True, False),
+    # -compr rolls blitz independently (several holders are fine), never twice on one menu
+    ("compr_rolls", ["-compr", "10", "50", "-comfr", "100.100.100"], False, False),
+)
+
+
 class TestCommandsFlag(unittest.TestCase):
     def assert_accepted(self, *flags, expected = None):
         result = parse_flags(*flags)
@@ -526,6 +578,21 @@ class TestCommandsFlag(unittest.TestCase):
                              ("pru_seed_unique", PRU_SEED_UNIQUE), ("pru_rolled_once", PRU_ROLLED_ONCE),
                              ("fru_pool_cycles", FRU_POOL_CYCLES), ("pru_pool_cycles", PRU_POOL_CYCLES), ("composed_unique", COMPOSED_UNIQUE)):
             with self.subTest(name):
+                result = subprocess.run(
+                    [sys.executable, "-c", script],
+                    cwd = REPO_ROOT,
+                    capture_output = True,
+                    text = True,
+                    timeout = 120,
+                )
+                self.assertEqual(result.returncode, 0, msg = result.stderr)
+                self.assertIn("ok", result.stdout)
+
+    def test_suplex_train_blitz(self):
+        for name, flags, one_holder, unique in SUPLEX_CASES:
+            with self.subTest(name):
+                script = (f"FLAGS = {flags!r}\nONE_HOLDER = {one_holder}\nUNIQUE = {unique}\n"
+                          + SUPLEX_BLITZ)
                 result = subprocess.run(
                     [sys.executable, "-c", script],
                     cwd = REPO_ROOT,
