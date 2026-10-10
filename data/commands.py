@@ -3,6 +3,40 @@ from constants.commands import *
 import random
 import args
 
+class UniquePool:
+    # the unique draw: no legal skill is dealt again while another has been dealt
+    # fewer times. counts every skill dealt this seed and offers a character only
+    # the least-dealt legal skills it does not already hold, so the skills go round
+    # once, then again, and a skill a character had to pass over (because it held
+    # it) is still first in line for the next character that can take it
+    def __init__(self, legal):
+        self.legal = list(legal)
+        self.tracked = set(self.legal)
+        self.dealt = {command : 0 for command in self.legal}
+
+    def candidates(self, held):
+        options = [command for command in self.legal if command not in held]
+        if not options:
+            return []
+        fewest = min(self.dealt[command] for command in options)
+        return [command for command in options if self.dealt[command] == fewest]
+
+    def take(self, command):
+        if command in self.dealt:
+            self.dealt[command] += 1
+        if command == name_id["Morph"]:
+            self.retire(command) # only one character gets morph
+
+    def give_back(self, command):
+        # a dealt command was taken off its character again
+        if self.dealt.get(command, 0) > 0:
+            self.dealt[command] -= 1
+
+    def retire(self, command):
+        # never deal this command again
+        if command in self.legal:
+            self.legal.remove(command)
+
 class Commands:
     def __init__(self, characters):
         self.characters = characters
@@ -131,18 +165,20 @@ class Commands:
 
         return skills
 
-    def draft_skills(self, characters, skill_counts, available, taken = None):
+    def draft_skills(self, characters, skill_counts, available, taken = None, pool = None):
         # snake draft the skill slots so commands are unique for as long as they last,
-        # refilling the available commands whenever they run out. `taken` as in
+        # then go round again. `pool` is the seed's UniquePool, which already counts every
+        # skill dealt elsewhere in the seed (explicit picks, rolls, random fills); without
+        # one, the draft is unique among its own slots. `taken` as in
         # random_skills: commands a character already holds and must not draft again
-        morph_id = name_id["Morph"]
         taken = taken or {}
+        if pool is None:
+            pool = UniquePool(available)
 
         draft_order = list(characters)
         random.shuffle(draft_order)
 
         skills = {character : [] for character in characters}
-        pool = list(available)
         for round_index in range(max(skill_counts.values(), default = 0)):
             round_order = [character for character in draft_order if skill_counts[character] > round_index]
             if round_index % 2:
@@ -151,47 +187,54 @@ class Commands:
             for character in round_order:
                 # never give a character the same command twice
                 held = set(skills[character]) | set(taken.get(character, ()))
-                candidates = [command for command in pool if command not in held]
+                candidates = pool.candidates(held)
                 if not candidates:
-                    # the pool ran out, or all that is left of it is already on this character.
-                    # refill around whatever is left instead of replacing it, so a command which
-                    # could not be handed out this turn is still waiting to be drafted later
-                    pool.extend(available)
-                    candidates = [command for command in pool if command not in held]
-                    if not candidates:
-                        continue
+                    continue
 
                 command = random.choice(candidates)
-                pool.remove(command)
+                pool.take(command)
                 skills[character].append(command)
-                if command == morph_id:
-                    # only one character gets morph. dropping it from the available commands is
-                    # enough to keep it out of the pool for good: a refill only happens once every
-                    # pooled command is already on the drafting character, so morph can never be
-                    # waiting in the pool at the moment a refill would add a second copy of it
-                    available.remove(morph_id)
 
         return skills
 
-    def guarantee_blitz(self, characters, skills):
-        # if suplex a train condition exists, guarantee blitz
+    def guarantee_blitz(self, characters, held, random_fill, unique_fill, rolled, pool):
+        # if suplex a train condition exists, guarantee blitz (even if blitz is in the
+        # excluded commands). runs before the backfill: when no character holds blitz
+        # yet (explicit pick or roll), deal it into one open backfill slot, which the
+        # fills and the unique pool's counts then account for. returns the blitz dealt
+        # per character, which the caller adds to that character's skills.
         import objectives
         blitz_id = name_id["Blitz"]
+        forced = {character : [] for character in characters}
 
         if not objectives.suplex_train_condition_exists:
-            return
-        if any(blitz_id in skills[character] for character in characters):
-            return
+            return forced
+        if any(blitz_id in held[character] for character in characters):
+            return forced
 
-        # replace a random skill slot with blitz (even if blitz is in the excluded commands)
-        possible_characters = [character for character in characters if skills[character]]
-        if not possible_characters:
-            return
+        open_characters = [character for character in characters
+                           if random_fill[character] + unique_fill[character] > 0]
+        if open_characters:
+            character = random.choice(open_characters)
+            fill = random.choice([random_fill] * random_fill[character]
+                                 + [unique_fill] * unique_fill[character])
+            fill[character] -= 1
+            forced[character].append(blitz_id)
+            pool.take(blitz_id)
+            return forced
 
-        character = random.choice(possible_characters)
-        skills[character][random.randrange(len(skills[character]))] = blitz_id
+        # every slot was rolled or picked: replace a rolled skill (not an explicit pick)
+        replaceable = [(character, index) for character in characters
+                       for index, command in enumerate(rolled[character])
+                       if command in pool.tracked and command != name_id["Morph"]]
+        if replaceable:
+            character, index = random.choice(replaceable)
+            pool.give_back(rolled[character][index])
+            rolled[character][index] = blitz_id
+            pool.take(blitz_id)
+        return forced
 
-    def roll_probability_commands(self, character, capacity, held):
+    def roll_probability_commands(self, character, capacity, held, pool = None):
         # roll one character's slots from the declared (command, percent) list
         # (-compr/-compru, plus -comfr/-comfru folded in). more commands can be
         # declared than the character has free slots, so: group the declarations
@@ -199,6 +242,8 @@ class Commands:
         # command in a random order, stopping as soon as `capacity` slots are
         # claimed. a rolled 97 (None) claims a slot and leaves it empty; a
         # rolled command the character already holds explicitly claims nothing.
+        # with a UniquePool (the unique modes), a skill already dealt elsewhere
+        # in the seed is skipped without a roll until every legal skill is used
         from data.characters import Characters
         fight_id = name_id["Fight"]
 
@@ -218,9 +263,14 @@ class Commands:
                 # to him (his slot backfills instead)
                 if command == fight_id and character == Characters.GAU:
                     continue
+                unique = pool is not None and command in pool.tracked
+                if unique and command not in pool.candidates(held | set(rolled)):
+                    continue
                 if random.randrange(100) < percent:
                     if command not in held:
                         rolled.append(command)
+                        if unique:
+                            pool.take(command)
         return rolled
 
     def mod_probability_random_commands(self):
@@ -228,9 +278,14 @@ class Commands:
         # 1. explicit -com picks claim their slots (97 holds a slot empty;
         #    99/98 mark slots for random/unique backfill)
         # 2. the declared probabilities roll into the remaining capacity
-        # 3. backfill: 98-marked slots draft unique, 99-marked slots fill
-        #    randomly, and any still-unfilled slots use the family default
+        # 3. backfill: 99-marked slots fill randomly, then 98-marked slots draft
+        #    unique, and any still-unfilled slots use the family default
         #    (unique for -comfru/-compru, random otherwise)
+        # unique means unique across the whole seed: one UniquePool tracks every
+        # skill dealt (explicit picks, rolls, random fills, drafts), and a unique
+        # draw never repeats a skill while another has been dealt fewer times.
+        # in the unique modes the rolls draw from it too, so a rolled skill is
+        # not rolled again by anyone else until every legal skill has been dealt.
         from data.characters import Characters
         fight_id = name_id["Fight"]
         magic_id = name_id["Magic"]
@@ -282,19 +337,35 @@ class Commands:
             except ValueError:
                 pass
 
-        # step 2: probability rolls into the remaining capacity
+        # the seed's unique pool: every legal skill (the non--rec pool plus any
+        # declared skill), minus the skills already handed out explicitly
+        skill_ids = set(name_id[name] for name in RANDOM_POSSIBLE_COMMANDS)
+        declared_skills = [command for command, _ in args.command_probabilities
+                           if command in skill_ids and command not in available]
+        pool = UniquePool(available + declared_skills)
+        for character in characters:
+            for command in explicit[character]:
+                pool.take(command)
+
+        # step 2: probability rolls into the remaining capacity. in the unique
+        # modes the rolls share the pool, so characters roll in a random order
+        # (nobody always gets first pick of the skills)
         rolled = {}
         capacity = {}
-        for character in characters:
+        roll_order = list(characters)
+        if args.commands_unique:
+            random.shuffle(roll_order)
+        for character in roll_order:
             capacity[character] = (COMMAND_SLOT_COUNT - len(explicit[character])
                                    - empty_slots[character]
                                    - random_fill[character] - unique_fill[character])
             rolled[character] = self.roll_probability_commands(
-                character, capacity[character], set(explicit[character]))
+                character, capacity[character], set(explicit[character]),
+                pool if args.commands_unique else None)
 
-        # step 2.5: at most one character may hold morph.  the rolls are
-        # independent per character, so several can win the same declared
-        # morph probability, but the morph-gauge ASM only supports a single
+        # step 2.5: at most one character may hold morph.  outside the unique
+        # modes the rolls are independent per character, so several can win
+        # the same declared morph probability, but the morph-gauge ASM only supports a single
         # holder (data/characters_asm.update_morph_character: "this assumes
         # only 1 character has morph") -- extra copies would be broken
         # commands.  every character's chance to ROLL morph is untouched:
@@ -313,23 +384,42 @@ class Commands:
             if character != keep:
                 rolled[character].remove(morph_id)
 
+        # rolled skills are dealt: unique draws must not repeat them. the unique
+        # modes counted them as they rolled; count -comfr/-compr rolls here. a
+        # declared morph is only ever dealt by its roll, never by backfill
+        if not args.commands_unique:
+            for character in characters:
+                for command in rolled[character]:
+                    pool.take(command)
+        if morph_placed:
+            pool.retire(morph_id)
+
         # step 3: backfill -- leftover capacity joins the family-default style
         for character in characters:
             leftover = capacity[character] - len(rolled[character])
-            if args.commands_unique_backfill:
+            if args.commands_unique:
                 unique_fill[character] += leftover
             else:
                 random_fill[character] += leftover
 
-        taken = {character : explicit[character]
+        # suplex a train: blitz claims a backfill slot first if nobody holds it
+        held = {character : explicit[character] + rolled[character] for character in characters}
+        forced = self.guarantee_blitz(characters, held, random_fill, unique_fill, rolled, pool)
+
+        # random fills first (as with -com, a 98 never repeats a 99's pick),
+        # then the unique draft from whatever the pool has left
+        taken = {character : explicit[character] + forced[character]
                  + [command for command in rolled[character] if command != NONE_COMMAND]
                  for character in characters}
-        drafted = self.draft_skills(characters, unique_fill, available, taken)
-        taken = {character : taken[character] + drafted[character] for character in characters}
         randomed = self.random_skills(characters, random_fill, available, taken)
+        for character in characters:
+            for command in randomed[character]:
+                pool.take(command)
+        taken = {character : taken[character] + randomed[character] for character in characters}
+        drafted = self.draft_skills(characters, unique_fill, available, taken, pool)
 
-        skills = {character : drafted[character] + randomed[character] for character in characters}
-        self.guarantee_blitz(characters, skills)
+        skills = {character : forced[character] + drafted[character] + randomed[character]
+                  for character in characters}
 
         # apply the commands in menu order: fight -> skills -> magic -> item,
         # with explicit picks ahead of rolled skills ahead of backfilled ones

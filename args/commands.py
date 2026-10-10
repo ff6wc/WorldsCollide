@@ -11,12 +11,15 @@ def name():
 #          with the probability flags its explicit picks claim slots first, its
 #          99/98 values mark slots for random/unique backfill, and its 97 values
 #          hold slots empty.
-# -comfr   F.M.I percent chances for Fight/Magic/Item (-comfru: unique backfill
-#          default). A special case of -compr limited to the common commands.
+# -comfr   F.M.I percent chances for Fight/Magic/Item (-comfru: unique skills).
+#          A special case of -compr limited to the common commands.
 # -compr   dot-separated command ids and matching percent chances
-#          (-compru: unique backfill default). Rolled slots are grouped by
-#          likelihood and capped by the character's free slots; anything left
-#          unfilled is backfilled from the non--rec-excluded pool.
+#          (-compru: unique skills). Rolled slots are grouped by likelihood and
+#          capped by the character's free slots; anything left unfilled is
+#          backfilled from the non--rec-excluded pool.
+# Unique means unique across the seed: no skill is dealt twice, by roll or by
+# backfill, until every legal skill has been dealt once (data/commands.py
+# UniquePool). Fight, Magic, Item and None are never unique.
 
 def parse(parser):
     commands = parser.add_argument_group("Commands")
@@ -30,7 +33,8 @@ def parse(parser):
                                  "'FIGHT.MAGIC.ITEM' percent chances (e.g. -comfr 10.50.90); "
                                  "unfilled slots are backfilled randomly, respecting -rec")
     commands.add_argument("-comfru", "--commands-fru", type = str, default = None, metavar = "F.M.I",
-                          help = "Like -comfr, but unfilled slots draft unique commands")
+                          help = "Like -comfr, but skills are unique: none is dealt twice until "
+                                 "every legal skill has been dealt")
     commands.add_argument("-compr", "--commands-pr", type = str, nargs = 2, default = None,
                           metavar = ("IDS", "PERCENTS"),
                           help = "Give commands by chance: dot-separated command ids and matching "
@@ -39,7 +43,8 @@ def parse(parser):
                                  "respecting -rec")
     commands.add_argument("-compru", "--commands-pru", type = str, nargs = 2, default = None,
                           metavar = ("IDS", "PERCENTS"),
-                          help = "Like -compr, but unfilled slots draft unique commands")
+                          help = "Like -compr, but skills are unique: a skill rolled or drafted for "
+                                 "one character is not dealt again until every legal skill has been dealt")
     commands.add_argument("-scc", "--shuffle-commands", action = "store_true", help = "Shuffle selected/randomized commands")
     commands.add_argument("-rec", "--random-exclude-command-ids", type = str, default = None, metavar = "VALUE",
                           help = "Exclude commands from random possibilities, as dot-separated command ids "
@@ -188,7 +193,7 @@ def process(args):
     if fr_value is not None and pr_value is not None and fr_unique != pr_unique:
         args.parser.error("commands: cannot mix unique and non-unique variants "
                           "(-comfru pairs with -compru, -comfr with -compr)")
-    args.commands_unique_backfill = fr_unique or pr_unique
+    args.commands_unique = fr_unique or pr_unique
 
     # traditional -com (composable with the probability flags)
     tokens = []
@@ -273,7 +278,7 @@ def options(args):
             for index, command_string in enumerate(args.command_strings):
                 result.append((COMMAND_OPTIONS[index], command_string, COMMAND_OPTIONS[index]))
         if args.commands_probability_mode:
-            mode_name = "Custom Unique" if args.commands_unique_backfill else "Custom"
+            mode_name = "Custom Unique" if args.commands_unique else "Custom"
             result.append(("Random Mode", mode_name, "commands_probability_mode"))
             for command, percent in args.command_probabilities:
                 command_name = "None" if command == NONE_COMMAND else id_name[command]
