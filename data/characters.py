@@ -32,6 +32,7 @@ class Characters():
         self.rom = rom
         self.args = args
         self.start_levels = None    # per-character levels when -stlr is used
+        self.exp_tables = None      # (default, capped) experience tables when -lc is used
 
         self.init_data = DataArray(self.rom, self.INIT_DATA_START, self.INIT_DATA_END, self.INIT_DATA_SIZE)
         self.name_data = DataArray(self.rom, self.NAMES_START, self.NAMES_END, self.NAME_SIZE)
@@ -96,6 +97,34 @@ class Characters():
         else:
             characters_asm.set_starting_level(self.args.start_level)
 
+    def mod_level_cap(self):
+        from data import level_cap
+        default = [self.rom.get_short(level_cap.EXP_TABLE_START + 2 * index)
+                   for index in range(level_cap.EXP_TABLE_COUNT)]
+        capped = level_cap.capped_table(default, self.args.level_cap_hard,
+                                        self.args.level_cap_mean, self.args.level_cap_width)
+        for index, value in enumerate(capped):
+            self.rom.set_short(level_cap.EXP_TABLE_START + 2 * index, value)
+        self.exp_tables = (default, capped)
+
+    def log_level_cap(self):
+        from log import section, format_option
+        from data import level_cap
+        default, capped = self.exp_tables
+        default_totals, capped_totals = level_cap.totals(default), level_cap.totals(capped)
+
+        # every 5th level up to the last one battle can reach (experience stops at 15,000,000)
+        reachable = max(level for level in range(1, 100)
+                        if capped_totals[level - 1] <= level_cap.BATTLE_EXP_CAP)
+        entries = [format_option(f"Level {level}", f"{capped_totals[level - 1]:,} ({default_totals[level - 1]:,})")
+                   for level in range(5, reachable + 1, 5)]
+        if reachable % 5:
+            entries.append(format_option(f"Level {reachable}",
+                                         f"{capped_totals[reachable - 1]:,} ({default_totals[reachable - 1]:,})"))
+        entries.append(format_option("Highest Level", reachable))
+        half = (len(entries) + 1) // 2
+        section("Level Cap: Total Exp (Default)", entries[:half], entries[half:])
+
     def log_start_levels(self):
         from log import section, format_option
         entries = [format_option(self.DEFAULT_NAME[character].capitalize(), level)
@@ -140,6 +169,9 @@ class Characters():
 
         self.mod_init_levels()
 
+        if self.args.level_cap_hard is not None or self.args.level_cap_mean is not None:
+            self.mod_level_cap()
+
         if self.args.character_stat_random_percent:
             self.stats_random_percent()
 
@@ -165,6 +197,8 @@ class Characters():
             self.commands.log()
             if self.start_levels:
                 self.log_start_levels()
+            if self.exp_tables:
+                self.log_level_cap()
 
         for character_index in range(len(self.characters)):
             self.init_data[character_index] = self.characters[character_index].init_data()
