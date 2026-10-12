@@ -16,8 +16,9 @@ def parse(parser):
                         metavar = ("LEVEL|MEAN", "WIDTH"),
                         help = "Level cap. One value LEVEL: hard cap, every level from LEVEL on costs the "
                                "most experience the game allows (524,280). Two values MEAN WIDTH: soft cap, "
-                               "experience to next level is multiplied by 1 + exp((level - MEAN) / WIDTH), "
-                               "doubling from MEAN to MEAN + 1. All values are whole numbers")
+                               "experience to next level is multiplied by 1 + 10^((level - MEAN) / WIDTH): "
+                               "double from MEAN to MEAN + 1, and every WIDTH levels past that multiply "
+                               "the extra cost by 10. All values are whole numbers")
 
 def process(args):
     args.level_cap_hard = None

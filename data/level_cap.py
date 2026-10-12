@@ -22,16 +22,18 @@ def hard_cap(table, cap):
             for level, value in enumerate(table, start = 1)]
 
 def soft_cap(table, mean, width):
-    # exp_to_next(L) = min(max, default(L) * (1 + exp((L - mean) / width))):
-    # double the default from `mean` to `mean + 1`, steeper for smaller widths
+    # exp_to_next(L) = min(max, default(L) * (1 + 10 ** ((L - mean) / width))):
+    # double the default from `mean` to `mean + 1`; every `width` levels past
+    # that multiplies the extra cost by ten (base 10 rather than e, so even the
+    # smallest width, 1, turns on sharply: x2, x11, x101...)
     result = []
     for level, value in enumerate(table, start = 1):
         exponent = (level - mean) / width
-        if exponent >= 50:     # past e^50 every entry is at the maximum anyway
+        if exponent >= 5:      # 1 + 10^5 times any entry (>= 1) is past the maximum
             result.append(STEP_MAX)
             continue
         # round to nearest (rounding up would add a whole step to tiny early entries), never below default
-        scaled = math.floor(value * (1 + math.exp(exponent)) + 0.5)
+        scaled = math.floor(value * (1 + 10 ** exponent) + 0.5)
         result.append(min(STEP_MAX, max(value, scaled)))
     return result
 

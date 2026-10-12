@@ -69,6 +69,8 @@ class TestLevelCapTable(unittest.TestCase):
         table = level_cap.capped_table(BASE, mean = 40, width = 5)
         # doubles from mean to mean + 1, untouched far below, never below default where reachable
         self.assertEqual(table[40 - 1], 2 * BASE[40 - 1])
+        # base 10: one width past the mean, the step is 1 + 10 = 11 times default
+        self.assertEqual(table[45 - 1], 11 * BASE[45 - 1])
         self.assertEqual(table[:10], BASE[:10])
         totals = level_cap.totals(table)
         self.assertTrue(all(value >= default for level, (value, default) in enumerate(zip(table, BASE), start = 1)
