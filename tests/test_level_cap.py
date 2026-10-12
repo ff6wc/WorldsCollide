@@ -36,8 +36,7 @@ class TestLevelCapFlag(unittest.TestCase):
     def test_hard_and_soft(self):
         self.assert_accepted("-lc", "30", expected = "-lc 30")
         self.assert_accepted("-lc", "40", "5", expected = "-lc 40 5")
-        # numbers are canonicalized
-        self.assert_accepted("-lc", "40.0", "2.50", expected = "-lc 40 2.5")
+        self.assert_accepted("-lc", "99", "99", expected = "-lc 99 99")
 
     def test_no_flag(self):
         result = parse_flags()
@@ -47,10 +46,12 @@ class TestLevelCapFlag(unittest.TestCase):
     def test_rejected(self):
         self.assert_rejected("-lc", "1", expected = "from 2 to 98")
         self.assert_rejected("-lc", "99", expected = "from 2 to 98")
-        self.assert_rejected("-lc", "30.5", expected = "whole number")
-        self.assert_rejected("-lc", "40", "0", expected = "greater than 0")
+        # whole numbers only: levels are integers and the width needs no finer tuning
+        self.assert_rejected("-lc", "30.5", expected = "invalid int value")
+        self.assert_rejected("-lc", "40", "2.5", expected = "invalid int value")
+        self.assert_rejected("-lc", "40", "0", expected = "width '0' must be from 1 to 99")
         self.assert_rejected("-lc", "0", "5", expected = "mean '0' must be from 1 to 99")
-        self.assert_rejected("-lc", "a", "b", expected = "must be numbers")
+        self.assert_rejected("-lc", "a", expected = "invalid int value")
         self.assert_rejected("-lc", "1", "2", "3", expected = "expected LEVEL")
 
 class TestLevelCapTable(unittest.TestCase):
@@ -76,7 +77,7 @@ class TestLevelCapTable(unittest.TestCase):
         narrow = level_cap.capped_table(BASE, mean = 40, width = 2)
         self.assertGreater(narrow[45 - 1], table[45 - 1])
         # extreme widths do not overflow
-        level_cap.capped_table(BASE, mean = 2, width = 0.01)
+        level_cap.capped_table(BASE, mean = 2, width = 1)
         level_cap.capped_table(BASE, mean = 99, width = 99)
 
     def test_total_never_wraps(self):
@@ -84,7 +85,7 @@ class TestLevelCapTable(unittest.TestCase):
         # character on any level; the 24-bit total must not wrap on the way to 99
         tables = [level_cap.capped_table(BASE, cap = cap) for cap in range(2, 99)]
         tables += [level_cap.capped_table(BASE, mean = mean, width = width)
-                   for mean in range(1, 100, 7) for width in (0.01, 0.5, 1, 3, 10, 99)]
+                   for mean in range(1, 100, 7) for width in (1, 2, 3, 10, 99)]
         tables += [level_cap.capped_table([level_cap.STEP_MAX] * 98, cap = 2)]
         for table in tables:
             self.assertLess(sum(table), level_cap.SUM_LIMIT)
