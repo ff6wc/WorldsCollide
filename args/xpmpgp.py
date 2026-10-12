@@ -1,3 +1,5 @@
+import re
+
 def name():
     return "Experience, Magic Points, Gold"
 
@@ -12,13 +14,14 @@ def parse(parser):
                         help = "Multiply gold by %(metavar)s [0-255], default %(default)s.")
     xpmpgp.add_argument("-nxppd", "--no-exp-party-divide", action = "store_true",
                         help = "Do not divide experience by number of surviving party members")
-    xpmpgp.add_argument("-lc", "--level-cap", default = None, type = int, nargs = "+",
+    xpmpgp.add_argument("-lc", "--level-cap", default = None, type = str, nargs = "+",
                         metavar = ("LEVEL|MEAN", "WIDTH"),
                         help = "Level cap. One value LEVEL: hard cap, every level from LEVEL on costs the "
                                "most experience the game allows (524,280). Two values MEAN WIDTH: soft cap, "
                                "experience to next level is multiplied by 1 + 10^((level - MEAN) / WIDTH): "
                                "double from MEAN to MEAN + 1, and every WIDTH levels past that multiply "
-                               "the extra cost by 10. All values are whole numbers")
+                               "the extra cost by 10. LEVEL and MEAN are whole numbers; WIDTH may have one "
+                               "decimal place (e.g. 2.5)")
 
 def process(args):
     args.level_cap_hard = None
@@ -32,17 +35,23 @@ def process(args):
 
     if len(args.level_cap) == 1:
         level = args.level_cap[0]
-        if not 2 <= level <= 98:
-            args.parser.error(f"-lc: hard cap level '{level}' must be from 2 to 98")
-        args.level_cap_hard = level
+        if not level.isdigit() or not 2 <= int(level) <= 98:
+            args.parser.error(f"-lc: hard cap level '{level}' must be a whole number from 2 to 98")
+        args.level_cap_hard = int(level)
     else:
         mean, width = args.level_cap
-        if not 1 <= mean <= 99:
-            args.parser.error(f"-lc: soft cap mean '{mean}' must be from 1 to 99")
-        if not 1 <= width <= 99:
-            args.parser.error(f"-lc: soft cap width '{width}' must be from 1 to 99")
-        args.level_cap_mean = mean
-        args.level_cap_width = width
+        if not mean.isdigit() or not 1 <= int(mean) <= 99:
+            args.parser.error(f"-lc: soft cap mean '{mean}' must be a whole number from 1 to 99")
+        # at most one decimal place: keeps the flag string and the flags menu row short
+        if not re.fullmatch(r"\d+(\.\d)?|\.\d", width) or not 0.1 <= float(width) <= 99:
+            args.parser.error(f"-lc: soft cap width '{width}' must be from 0.1 to 99, "
+                              "with at most one decimal place")
+        args.level_cap_mean = int(mean)
+        args.level_cap_width = float(width)
+
+def _format_width(width):
+    # 5.0 -> "5", 2.5 -> "2.5"
+    return f"{width:g}"
 
 def flags(args):
     flags = ""
@@ -60,7 +69,7 @@ def flags(args):
     if args.level_cap_hard is not None:
         flags += f" -lc {args.level_cap_hard}"
     elif args.level_cap_mean is not None:
-        flags += f" -lc {args.level_cap_mean} {args.level_cap_width}"
+        flags += f" -lc {args.level_cap_mean} {_format_width(args.level_cap_width)}"
 
     return flags
 
@@ -77,7 +86,7 @@ def _level_cap_value(args):
     if args.level_cap_hard is not None:
         return args.level_cap_hard
     if args.level_cap_mean is not None:
-        return f"Soft {args.level_cap_mean}/{args.level_cap_width}"
+        return f"Soft {args.level_cap_mean}/{_format_width(args.level_cap_width)}"
     return "None"
 
 def menu(args):
