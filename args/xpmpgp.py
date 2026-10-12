@@ -74,7 +74,7 @@ def options(args):
 
 def _level_cap_value(args):
     if args.level_cap_hard is not None:
-        return f"Hard {args.level_cap_hard}"
+        return args.level_cap_hard
     if args.level_cap_mean is not None:
         return f"Soft {args.level_cap_mean}/{args.level_cap_width}"
     return "None"
