@@ -94,6 +94,20 @@ class TestLevelCapTable(unittest.TestCase):
         level_cap.capped_table(BASE, mean = 2, width = 0.1)
         level_cap.capped_table(BASE, mean = 99, width = 99)
 
+    def test_highest_level(self):
+        # the soft cap's last reachable level: its total fits under the battle
+        # cap and the next level's does not (or it is 99)
+        for mean, width in ((40, 5), (40, 1), (60, 10), (20, 0.5), (99, 99)):
+            table = level_cap.capped_table(BASE, mean = mean, width = width)
+            totals = level_cap.totals(table)
+            highest = level_cap.highest_level(table, level_cap.BATTLE_EXP_CAP)
+            self.assertLessEqual(totals[highest - 1], level_cap.BATTLE_EXP_CAP)
+            if highest < 99:
+                self.assertGreater(totals[highest], level_cap.BATTLE_EXP_CAP)
+        # a hard cap's highest level is the cap itself
+        for cap in (2, 30, 98):
+            self.assertEqual(level_cap.highest_level(BASE, level_cap.hard_cap_experience(BASE, cap)), cap)
+
     def test_total_never_wraps(self):
         # battle stops experience at 15,000,000, but -stl/-stlr/-sal can place a
         # character on any level; the 24-bit total must not wrap on the way to 99

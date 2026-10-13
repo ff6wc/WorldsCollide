@@ -26,8 +26,9 @@ BATTLE_EXP_CAP_END = 0x026278
 SUM_LIMIT = 1 << 21             # summed entries at which the 24-bit total (x 8) wraps around
 
 # status menu, "experience to next level" (C3/60A0): C3/60A6 CMP #$63 / BEQ shows 0
-# needed at level 99. a hard cap patches the level (C3/60A7) and BEQ -> BCS (C3/60A8)
-# so every character at or above the cap shows 0, exactly like vanilla level 99
+# needed at level 99. a cap patches the level (C3/60A7) and BEQ -> BCS (C3/60A8) so
+# every character at or above it shows 0, exactly like vanilla level 99: the hard
+# cap's level, or the soft cap's highest level reachable under the battle cap
 MENU_MAX_LEVEL_START = 0x0360a7
 MENU_MAX_LEVEL_END = 0x0360a8
 BCS = 0xb0
@@ -72,6 +73,11 @@ def guard_wrap(table):
 
 def capped_table(table, mean, width):
     return guard_wrap(soft_cap(table, mean, width))
+
+def highest_level(table, exp_cap):
+    # the highest level whose total experience fits under `exp_cap`
+    level_totals = totals(table)
+    return max(level for level in range(1, 100) if level_totals[level - 1] <= exp_cap)
 
 def totals(table):
     # total experience at each level 1..99

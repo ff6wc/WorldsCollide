@@ -114,6 +114,11 @@ class Characters():
             for index, value in enumerate(capped):
                 self.rom.set_short(level_cap.EXP_TABLE_START + 2 * index, value)
             self.exp_cap = level_cap.BATTLE_EXP_CAP
+            # once experience stops at the battle cap no level can be gained: show
+            # 0 experience to next level from the last reachable level on, as at 99
+            highest = level_cap.highest_level(capped, self.exp_cap)
+            if highest < 99:
+                characters_asm.set_menu_level_cap(highest)
         self.exp_tables = (default, capped)
 
     def log_level_cap(self):
@@ -123,8 +128,7 @@ class Characters():
         default_totals, capped_totals = level_cap.totals(default), level_cap.totals(capped)
 
         # every 5th level up to the last one battle can reach (experience stops at the cap)
-        reachable = max(level for level in range(1, 100)
-                        if capped_totals[level - 1] <= self.exp_cap)
+        reachable = level_cap.highest_level(capped, self.exp_cap)
         entries = [format_option(f"Level {level}", f"{capped_totals[level - 1]:,} ({default_totals[level - 1]:,})")
                    for level in range(5, reachable + 1, 5)]
         if reachable % 5:
