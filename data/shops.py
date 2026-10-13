@@ -240,15 +240,6 @@ class Shops():
         (0x1FF7, 0x1FFD),   # Unused bit range before checksum, 7 bytes
     ]
 
-    # Special relics that should always be sold as singles
-    SPECIAL_RELICS = {
-        name_id["Economizer"], name_id["Offering"], name_id["Hero Ring"],
-        name_id["Dragon Horn"], name_id["Gem Box"], name_id["Merit Award"],
-        name_id["Exp. Egg"], name_id["Marvel Shoes"], name_id["Ribbon"],
-        name_id["Genji Glove"], name_id["Gauntlet"], name_id["Moogle Charm"],
-        name_id["Atlas Armlet"], name_id["DragoonBoots"],
-    }
-
     # Basic healing items: larger packs (3-10)
     BASIC_HEALING = {
         name_id["Tonic"], name_id["Potion"], name_id["Fenix Down"],
@@ -289,13 +280,12 @@ class Shops():
             else:
                 return 1
 
-        # Relics: 1-4, except special relics (1) and earrings (1-2)
+        # Relics: singles (a player rarely wants several of one relic), except
+        # earrings (1-2, since a pair stacks)
         if item_id in RELICS:
-            if item_id in self.SPECIAL_RELICS:
-                return 1
-            elif item_id == name_id["Earrings"]:
+            if item_id == name_id["Earrings"]:
                 return random.randint(1, 2)
-            return random.randint(1, 4)
+            return 1
 
         # Basic healing items: 1-4 for Fenix Down, 2-6 for everything else
         if item_id in self.BASIC_HEALING:
