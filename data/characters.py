@@ -33,6 +33,7 @@ class Characters():
         self.args = args
         self.start_levels = None    # per-character levels when -stlr is used
         self.exp_tables = None      # (default, capped) experience tables when -lc is used
+        self.exp_cap = None         # battle experience cap when -lc is used
 
         self.init_data = DataArray(self.rom, self.INIT_DATA_START, self.INIT_DATA_END, self.INIT_DATA_SIZE)
         self.name_data = DataArray(self.rom, self.NAMES_START, self.NAMES_END, self.NAME_SIZE)
@@ -101,10 +102,17 @@ class Characters():
         from data import level_cap
         default = [self.rom.get_short(level_cap.EXP_TABLE_START + 2 * index)
                    for index in range(level_cap.EXP_TABLE_COUNT)]
-        capped = level_cap.capped_table(default, self.args.level_cap_hard,
-                                        self.args.level_cap_mean, self.args.level_cap_width)
-        for index, value in enumerate(capped):
-            self.rom.set_short(level_cap.EXP_TABLE_START + 2 * index, value)
+        if self.args.level_cap_hard is not None:
+            # hard cap: vanilla table, battle experience capped at the total for the level
+            capped = default
+            self.exp_cap = level_cap.hard_cap_experience(default, self.args.level_cap_hard)
+            characters_asm.set_battle_experience_cap(self.exp_cap)
+        else:
+            # soft cap: steeper table, vanilla battle cap
+            capped = level_cap.capped_table(default, self.args.level_cap_mean, self.args.level_cap_width)
+            for index, value in enumerate(capped):
+                self.rom.set_short(level_cap.EXP_TABLE_START + 2 * index, value)
+            self.exp_cap = level_cap.BATTLE_EXP_CAP
         self.exp_tables = (default, capped)
 
     def log_level_cap(self):
@@ -113,15 +121,16 @@ class Characters():
         default, capped = self.exp_tables
         default_totals, capped_totals = level_cap.totals(default), level_cap.totals(capped)
 
-        # every 5th level up to the last one battle can reach (experience stops at 15,000,000)
+        # every 5th level up to the last one battle can reach (experience stops at the cap)
         reachable = max(level for level in range(1, 100)
-                        if capped_totals[level - 1] <= level_cap.BATTLE_EXP_CAP)
+                        if capped_totals[level - 1] <= self.exp_cap)
         entries = [format_option(f"Level {level}", f"{capped_totals[level - 1]:,} ({default_totals[level - 1]:,})")
                    for level in range(5, reachable + 1, 5)]
         if reachable % 5:
             entries.append(format_option(f"Level {reachable}",
                                          f"{capped_totals[reachable - 1]:,} ({default_totals[reachable - 1]:,})"))
         entries.append(format_option("Highest Level", reachable))
+        entries.append(format_option("Experience Cap", f"{self.exp_cap:,}"))
         half = (len(entries) + 1) // 2
         section("Level Cap: Total Exp (Default)", entries[:half], entries[half:])
 

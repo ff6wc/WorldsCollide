@@ -63,14 +63,15 @@ class TestLevelCapFlag(unittest.TestCase):
 
 class TestLevelCapTable(unittest.TestCase):
     def test_hard_cap(self):
-        for cap in (2, 10, 30, 58, 98):
-            table = level_cap.capped_table(BASE, cap = cap)
-            for level in range(1, 99):
-                value, default = table[level - 1], BASE[level - 1]
-                if level < cap:
-                    self.assertEqual(value, default, f"cap {cap}: level {level} changed")
-                elif level_cap.totals(table)[level - 1] <= level_cap.BATTLE_EXP_CAP:
-                    self.assertEqual(value, level_cap.STEP_MAX, f"cap {cap}: level {level} not at max")
+        # the battle experience cap is exactly the total for the cap level: that
+        # level is reachable, the next one is not, and it fits the 24-bit cap
+        totals = level_cap.totals(BASE)
+        for cap in range(2, 99):
+            experience = level_cap.hard_cap_experience(BASE, cap)
+            self.assertEqual(experience, totals[cap - 1])
+            self.assertLess(experience, totals[cap], f"cap {cap}: next level reachable")
+            self.assertLessEqual(experience, level_cap.BATTLE_EXP_CAP)
+            self.assertEqual(len(experience.to_bytes(3, "little")), 3)
 
     def test_soft_cap(self):
         table = level_cap.capped_table(BASE, mean = 40, width = 5)
@@ -96,17 +97,16 @@ class TestLevelCapTable(unittest.TestCase):
     def test_total_never_wraps(self):
         # battle stops experience at 15,000,000, but -stl/-stlr/-sal can place a
         # character on any level; the 24-bit total must not wrap on the way to 99
-        tables = [level_cap.capped_table(BASE, cap = cap) for cap in range(2, 99)]
-        tables += [level_cap.capped_table(BASE, mean = mean, width = width)
-                   for mean in range(1, 100, 7) for width in (0.1, 0.5, 1, 2.5, 3, 10, 99)]
-        tables += [level_cap.capped_table([level_cap.STEP_MAX] * 98, cap = 2)]
+        tables = [level_cap.capped_table(BASE, mean = mean, width = width)
+                  for mean in range(1, 100, 7) for width in (0.1, 0.5, 1, 2.5, 3, 10, 99)]
+        tables += [level_cap.capped_table([level_cap.STEP_MAX] * 98, mean = 2, width = 1)]
         for table in tables:
             self.assertLess(sum(table), level_cap.SUM_LIMIT)
             self.assertTrue(all(0 < value <= level_cap.STEP_MAX for value in table))
 
     def test_reachable_levels_unchanged_by_guard(self):
         # the guard only touches levels battle can no longer reach
-        raw = level_cap.hard_cap(BASE, 30)
+        raw = level_cap.soft_cap(BASE, 30, 1)
         guarded = level_cap.guard_wrap(raw)
         totals = level_cap.totals(guarded)
         for level in range(1, 99):
