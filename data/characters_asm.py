@@ -14,6 +14,14 @@ def set_battle_experience_cap(experience):
     space = Reserve(level_cap.BATTLE_EXP_CAP_START, level_cap.BATTLE_EXP_CAP_END, "battle experience cap")
     space.write(experience.to_bytes(3, 'little'))
 
+def set_menu_level_cap(level):
+    # status menu: show 0 experience to next level at or above `level`, the
+    # same path vanilla takes at level 99 (C3/60A6 CMP #$63; BEQ -> CMP #level; BCS)
+    from data import level_cap
+    space = Reserve(level_cap.MENU_MAX_LEVEL_START, level_cap.MENU_MAX_LEVEL_END,
+                    "status menu: no experience needed at the level cap")
+    space.write([level, level_cap.BCS])
+
 def set_starting_level(start_level):
     space = Reserve(0x09fc6, 0x09fc6, "Starting level")
     space.write(start_level.to_bytes(1, 'little'))

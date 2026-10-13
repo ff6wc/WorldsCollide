@@ -107,6 +107,7 @@ class Characters():
             capped = default
             self.exp_cap = level_cap.hard_cap_experience(default, self.args.level_cap_hard)
             characters_asm.set_battle_experience_cap(self.exp_cap)
+            characters_asm.set_menu_level_cap(self.args.level_cap_hard)
         else:
             # soft cap: steeper table, vanilla battle cap
             capped = level_cap.capped_table(default, self.args.level_cap_mean, self.args.level_cap_width)

@@ -25,6 +25,13 @@ BATTLE_EXP_CAP_START = 0x026276 # the cap's 3 bytes (24-bit little endian)
 BATTLE_EXP_CAP_END = 0x026278
 SUM_LIMIT = 1 << 21             # summed entries at which the 24-bit total (x 8) wraps around
 
+# status menu, "experience to next level" (C3/60A0): C3/60A6 CMP #$63 / BEQ shows 0
+# needed at level 99. a hard cap patches the level (C3/60A7) and BEQ -> BCS (C3/60A8)
+# so every character at or above the cap shows 0, exactly like vanilla level 99
+MENU_MAX_LEVEL_START = 0x0360a7
+MENU_MAX_LEVEL_END = 0x0360a8
+BCS = 0xb0
+
 def hard_cap_experience(table, cap):
     # battle experience cap for a hard cap at level `cap`: exactly the total for
     # that level, so it can be reached and the next level never can
