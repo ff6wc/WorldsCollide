@@ -7,6 +7,21 @@ def equipable_umaro(character_count):
 
     space = Reserve(0x39ef4, 0x39ef7, "Reequip Umaro if genji glove/gauntlet/merit award equipped/removed", asm.NOP())
 
+def set_battle_experience_cap(experience):
+    # C2/6235 clamps a character's experience after battle to this 24-bit value
+    # (vanilla 15,000,000); -lc LEVEL lowers it to the total for LEVEL
+    from data import level_cap
+    space = Reserve(level_cap.BATTLE_EXP_CAP_START, level_cap.BATTLE_EXP_CAP_END, "battle experience cap")
+    space.write(experience.to_bytes(3, 'little'))
+
+def set_menu_level_cap(level):
+    # status menu: show 0 experience to next level at or above `level`, the
+    # same path vanilla takes at level 99 (C3/60A6 CMP #$63; BEQ -> CMP #level; BCS)
+    from data import level_cap
+    space = Reserve(level_cap.MENU_MAX_LEVEL_START, level_cap.MENU_MAX_LEVEL_END,
+                    "status menu: no experience needed at the level cap")
+    space.write([level, level_cap.BCS])
+
 def set_starting_level(start_level):
     space = Reserve(0x09fc6, 0x09fc6, "Starting level")
     space.write(start_level.to_bytes(1, 'little'))
