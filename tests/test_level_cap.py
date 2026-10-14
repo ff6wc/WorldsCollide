@@ -49,17 +49,36 @@ class TestLevelCapFlag(unittest.TestCase):
         self.assertNotIn("-lc", result.stdout)
 
     def test_rejected(self):
-        self.assert_rejected("-lc", "1", expected = "from 2 to 98")
-        self.assert_rejected("-lc", "99", expected = "from 2 to 98")
+        self.assert_rejected("-lc", "1", expected = "from 3 to 98")
+        self.assert_rejected("-lc", "2", expected = "from 3 to 98")
+        self.assert_rejected("-lc", "99", expected = "from 3 to 98")
         # levels are whole numbers; the width allows one decimal place
-        self.assert_rejected("-lc", "30.5", expected = "whole number from 2 to 98")
+        self.assert_rejected("-lc", "30.5", expected = "whole number from 3 to 98")
         self.assert_rejected("-lc", "40.5", "2", expected = "whole number from 1 to 99")
         self.assert_rejected("-lc", "40", "2.55", expected = "at most one decimal place")
         self.assert_rejected("-lc", "40", "0", expected = "width '0' must be from 0.1 to 99")
         self.assert_rejected("-lc", "40", "100", expected = "width '100' must be from 0.1 to 99")
         self.assert_rejected("-lc", "0", "5", expected = "mean '0' must be a whole number from 1 to 99")
-        self.assert_rejected("-lc", "a", expected = "whole number from 2 to 98")
+        self.assert_rejected("-lc", "a", expected = "whole number from 3 to 98")
         self.assert_rejected("-lc", "1", "2", "3", expected = "expected LEVEL")
+
+    def test_hard_cap_not_below_starting_level(self):
+        # the default start (level 3) is the lowest cap; a cap may equal the start
+        self.assert_accepted("-lc", "3", expected = "-lc 3")
+        self.assert_accepted("-stl", "20", "-lc", "20", expected = "-lc 20")
+        self.assert_rejected("-stl", "21", "-lc", "20", expected = "below the starting level (-stl 21)")
+        # -stlr: every character's level must fit, so its MAX counts
+        self.assert_accepted("-stlr", "5", "20", "-lc", "20", expected = "-lc 20")
+        self.assert_rejected("-stlr", "5", "21", "-lc", "20", expected = "below the starting level (-stlr 21)")
+        self.assert_rejected("-stlr", "21", "5", "-lc", "20", expected = "below the starting level (-stlr 21)")
+        # a soft cap has no such limit
+        self.assert_accepted("-stl", "50", "-lc", "20", "5", expected = "-lc 20 5")
+
+    def test_usage_shows_at_most_two_values(self):
+        result = subprocess.run([sys.executable, os.path.join("args", "arguments.py"), "-h"],
+                                cwd = REPO_ROOT, capture_output = True, text = True, timeout = 60)
+        self.assertIn("[-lc LEVEL|MEAN [WIDTH]]", result.stdout)
+        self.assertNotIn("WIDTH ...", result.stdout)
 
 class TestLevelCapTable(unittest.TestCase):
     def test_hard_cap(self):
@@ -126,6 +145,38 @@ class TestLevelCapTable(unittest.TestCase):
         for level in range(1, 99):
             if totals[level] <= level_cap.BATTLE_EXP_CAP:
                 self.assertEqual(guarded[level - 1], raw[level - 1])
+
+# the vanilla bytes the patches overwrite, from a headerless FF3 (US) 1.0 rom at
+# the repository root; skipped when there is none (CI has no rom)
+ROM_PATH = os.path.join(REPO_ROOT, "ff3.smc")
+
+@unittest.skipUnless(os.path.isfile(ROM_PATH), "needs ff3.smc at the repository root")
+class TestLevelCapOffsets(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        with open(ROM_PATH, "rb") as rom:
+            data = rom.read()
+        if len(data) % 0x8000 == 0x200:
+            data = data[0x200:]     # copier header
+        cls.rom = data
+
+    def test_experience_table(self):
+        start, end = level_cap.EXP_TABLE_START, level_cap.EXP_TABLE_END
+        self.assertEqual(end - start + 1, 2 * level_cap.EXP_TABLE_COUNT)
+        table = [int.from_bytes(self.rom[start + 2 * index:start + 2 * index + 2], "little")
+                 for index in range(level_cap.EXP_TABLE_COUNT)]
+        self.assertEqual(table[:5], [4, 8, 14, 24, 34])
+        self.assertEqual(table[-1], 11111)
+        self.assertEqual(level_cap.totals(table)[-1], 2637112)    # vanilla experience for level 99
+
+    def test_battle_experience_cap(self):
+        start, end = level_cap.BATTLE_EXP_CAP_START, level_cap.BATTLE_EXP_CAP_END
+        self.assertEqual(int.from_bytes(self.rom[start:end + 1], "little"), level_cap.BATTLE_EXP_CAP)
+
+    def test_status_menu_level_check(self):
+        # C3/60A6: CMP #$63 (99) / BEQ; the patch rewrites the operand and the branch
+        start, end = level_cap.MENU_MAX_LEVEL_START, level_cap.MENU_MAX_LEVEL_END
+        self.assertEqual(self.rom[start - 1:end + 1], bytes([0xc9, 0x63, 0xf0]))
 
 if __name__ == "__main__":
     unittest.main()

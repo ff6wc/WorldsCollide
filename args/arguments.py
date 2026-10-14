@@ -1,3 +1,14 @@
+import argparse
+
+class HelpFormatter(argparse.HelpFormatter):
+    # an option that takes one or two values (nargs "+" plus max_values = 2 on the
+    # action, with the group's process() rejecting more) shows as "FIRST [SECOND]"
+    # rather than argparse's "FIRST [SECOND ...]"
+    def _format_args(self, action, default_metavar):
+        if getattr(action, "max_values", None) == 2 and isinstance(action.metavar, tuple):
+            return "%s [%s]" % action.metavar
+        return super()._format_args(action, default_metavar)
+
 class Arguments:
     def __init__(self):
         import importlib
@@ -16,7 +27,7 @@ class Arguments:
             self.group_modules[group] = importlib.import_module("args." + group)
 
         from argparse import ArgumentParser
-        self.parser = ArgumentParser()
+        self.parser = ArgumentParser(formatter_class = HelpFormatter)
 
         self.parser.add_argument("-i", dest = "input_file", required = True, help = "FFIII US v1.0 rom file")
         self.parser.add_argument("-o", dest = "output_file", required = False, help = "Modified FFIII US v1.0 rom file")

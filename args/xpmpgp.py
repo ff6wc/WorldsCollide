@@ -14,14 +14,16 @@ def parse(parser):
                         help = "Multiply gold by %(metavar)s [0-255], default %(default)s.")
     xpmpgp.add_argument("-nxppd", "--no-exp-party-divide", action = "store_true",
                         help = "Do not divide experience by number of surviving party members")
-    xpmpgp.add_argument("-lc", "--level-cap", default = None, type = str, nargs = "+",
+    level_cap = xpmpgp.add_argument("-lc", "--level-cap", default = None, type = str, nargs = "+",
                         metavar = ("LEVEL|MEAN", "WIDTH"),
-                        help = "Level cap. One value LEVEL: hard cap, every level from LEVEL on costs the "
-                               "most experience the game allows (524,280). Two values MEAN WIDTH: soft cap, "
-                               "experience to next level is multiplied by 1 + 10^((level - MEAN) / WIDTH): "
-                               "double from MEAN to MEAN + 1, and every WIDTH levels past that multiply "
-                               "the extra cost by 10. LEVEL and MEAN are whole numbers; WIDTH may have one "
-                               "decimal place (e.g. 2.5)")
+                        help = "Level cap. One value LEVEL: hard cap, characters stop gaining experience "
+                               "once they reach LEVEL (the status menu shows 0 to the next level, as at 99); "
+                               "LEVEL must be at least the starting level (-stl, or -stlr's MAX). Two values "
+                               "MEAN WIDTH: soft cap, experience to next level is multiplied by "
+                               "1 + 10^((level - MEAN) / WIDTH): double from MEAN to MEAN + 1, and every "
+                               "WIDTH levels past that multiply the extra cost by 10. LEVEL and MEAN are "
+                               "whole numbers; WIDTH may have one decimal place (e.g. 2.5)")
+    level_cap.max_values = 2    # usage reads "-lc LEVEL|MEAN [WIDTH]"; process() rejects a third value
 
 def process(args):
     args.level_cap_hard = None
@@ -35,9 +37,16 @@ def process(args):
 
     if len(args.level_cap) == 1:
         level = args.level_cap[0]
-        if not level.isdigit() or not 2 <= int(level) <= 98:
-            args.parser.error(f"-lc: hard cap level '{level}' must be a whole number from 2 to 98")
+        # 3 is the lowest starting level (-stl/-stlr); 99 is no cap at all
+        if not level.isdigit() or not 3 <= int(level) <= 98:
+            args.parser.error(f"-lc: hard cap level '{level}' must be a whole number from 3 to 98")
         args.level_cap_hard = int(level)
+        # nobody may start above a hard cap (the characters group is processed first)
+        start = args.start_level_random_max if args.start_level_random else args.start_level
+        start_flag = "-stlr" if args.start_level_random else "-stl"
+        if start > args.level_cap_hard:
+            args.parser.error(f"-lc: hard cap level {level} is below the starting level "
+                              f"({start_flag} {start}); raise the cap or lower the starting level")
     else:
         mean, width = args.level_cap
         if not mean.isdigit() or not 1 <= int(mean) <= 99:
