@@ -20,11 +20,14 @@ model, assembly hooks, troubleshooting), see [llms.md](llms.md) and
 python3 wc.py -i ff3.smc -o tests/test_output.smc   # roll a seed
 python3 wc.py -h                                     # exercise all flag parsing
 python3 -m unittest discover -s tests                # unit tests (no ROM needed)
+python3 tests/rom_smoke.py --rom ff3.smc             # roll every on/off flag alone
 ```
 
 Generated artifacts (`.smc`, logs) belong in `tests/`, which is gitignored
 for everything except the unit test sources. CI runs the unit tests, a
-syntax check, and `wc.py -h` on every push/PR.
+syntax check, and `wc.py -h` on every push/PR. When the `FF3_ROM_URL`
+repository secret is set, CI also runs `tests/rom_smoke.py`, which rolls a
+real seed for every on/off flag and fails on any crash.
 
 ## The two cardinal rules
 

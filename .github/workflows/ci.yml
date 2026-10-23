@@ -45,3 +45,26 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: CLI smoke test
         run: python wc.py -h
+
+  rom-smoke:
+    name: ROM smoke rolls
+    runs-on: ubuntu-latest
+    # needs a ROM, which is never committed: set the FF3_ROM_URL repository
+    # secret to a private download URL (e.g. a signed GCS URL) to enable this job
+    env:
+      FF3_ROM_URL: ${{ secrets.FF3_ROM_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.FF3_ROM_URL != ''
+      - uses: actions/setup-python@v5
+        if: env.FF3_ROM_URL != ''
+        with:
+          python-version: "3.12"
+      - name: Download ROM
+        if: env.FF3_ROM_URL != ''
+        run: |
+          curl -fsSL "$FF3_ROM_URL" -o "$RUNNER_TEMP/ff3.smc"
+          python -c "import sys; from valid_rom_file import valid_rom_file; sys.exit(0 if valid_rom_file(sys.argv[1]) else 'ROM checksum mismatch')" "$RUNNER_TEMP/ff3.smc"
+      - name: Roll every on/off flag
+        if: env.FF3_ROM_URL != ''
+        run: python tests/rom_smoke.py --rom "$RUNNER_TEMP/ff3.smc"

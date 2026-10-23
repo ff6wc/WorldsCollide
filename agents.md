@@ -37,6 +37,8 @@ python3 -m unittest discover -s tests -v
 ```
 Run this after any change to `memory/`, `utils/`, `seed.py`, or `valid_rom_file.py`, and add tests for new pure-Python logic. The same suite runs in CI (`.github/workflows/ci.yml`) on every push and pull request, along with `python -m compileall`, `wc.py -h`, and a guard that fails if any ROM-like or oversized file is ever committed.
 
+For changes that touch event/ROM writing, also roll real seeds: `python3 tests/rom_smoke.py --rom ff3.smc` rolls every on/off flag alone (plus a few combinations) and reports any roll that crashes. CI runs it when the `FF3_ROM_URL` secret is configured.
+
 ---
 
 ## 2. Playbook Commands
