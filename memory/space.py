@@ -103,15 +103,15 @@ class Space():
         self._update_label_pointers()
 
     def clear(self, value):
-        try:
-            values = [value] * (len(self) // len(value))
-        except TypeError:
-            # value is a single int (no len()), not a sequence
+        # int-like fills (incl. IntEnum/IntFlag, whose len() returns a popcount
+        # on Python 3.11+) occupy one byte each.
+        if isinstance(value, int):
             values = [value] * len(self)
         else:
             try:
                 values = [value] * (len(self) // len(value))
-            except:
+            except TypeError:
+                # value has no len(), e.g. a single instruction
                 values = [value] * len(self)
 
         values = self._invoke_callables(values)
@@ -212,10 +212,12 @@ class Space():
                 index += size
             else:
                 new_values.append(value)
-                try:
-                    index += len(value)
-                except TypeError:
-                    # value is a single byte/int (no len())
+                # A flattened scalar byte value occupies one byte. int covers
+                # plain ints and IntEnum/IntFlag members (e.g. Flash, Status).
+                # NB: Python 3.11+ added len() to IntFlag (returns the popcount),
+                # so we must NOT use len() to size int-like values or the byte
+                # count desyncs and label pointers land at the wrong address.
+                if isinstance(value, int):
                     index += 1
                 else:
                     try:

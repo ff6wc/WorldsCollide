@@ -98,10 +98,41 @@ class TestSpaceLabels(SpaceTestCase):
         with self.assertRaises(ValueError):
             space.write("LABEL", 0xea)
 
+    def test_int_flag_values_count_as_one_byte_for_forward_labels(self):
+        # Python 3.11+ gives IntFlag members a len() (their popcount); sizing
+        # them with len() shifted every later label pointer, leaving None
+        # placeholder bytes in the rom (seen with -nfh, Flash.WHITE)
+        from enum import IntFlag
+        class Color(IntFlag):
+            RED = 0x20
+            GREEN = 0x40
+            BLUE = 0x80
+            WHITE = RED | GREEN | BLUE
+
+        space = Space(0x100, 0x10f, "test space")
+        space.write(
+            0x01, Color.WHITE,
+            space.label_address16("TARGET"),
+            "TARGET",
+            0xea,
+        )
+        self.assertNotIn(None, self.rom.get_bytes(0x100, 5))
+        self.assertEqual(self.rom.get_bytes(0x102, 2), [0x04, 0x01])
+
 class TestSpaceClear(SpaceTestCase):
     def test_clear_with_single_value(self):
         space = Space(0x100, 0x103, "test space", clear_value = 0xff)
         self.assertEqual(self.rom.get_bytes(0x100, 4), [0xff] * 4)
+
+    def test_clear_with_int_flag_value(self):
+        from enum import IntFlag
+        class Mask(IntFlag):
+            A = 0x01
+            B = 0x02
+            AB = A | B
+
+        space = Space(0x100, 0x103, "test space", clear_value = Mask.AB)
+        self.assertEqual(self.rom.get_bytes(0x100, 4), [Mask.AB] * 4)
 
     def test_clear_with_instruction_value(self):
         # multi-byte clear values are callables with a len(), like the
