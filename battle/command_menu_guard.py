@@ -1,7 +1,7 @@
 from memory.space import Bank, Reserve, Write
 import instruction.asm as asm
 
-# With probability-randomized commands (-comfr/-compr) a character's whole
+# With fully randomized commands (-comr/-comru) a character's whole
 # menu can be commands that are illegal while Imped (only Fight, Item,
 # Magic, Revert, Mimic, Row, Def, Jump, X-Magic, Health and Shock carry
 # the imp-usable bit in the CF/FE00 command info table).  The per-turn

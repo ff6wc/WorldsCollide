@@ -90,6 +90,8 @@ class Arguments:
         # Resolve required characters (-rc) now that the rng is seeded: this may choose random
         # required characters and finalizes the starting party and the party-select unmovable mask
         self.group_modules["starting_party"].resolve_required_characters(self)
+        # draw the -comw random skill groups (no rng use without them)
+        self.group_modules["commands"].resolve_random_weights(self)
 
     def _process_min_max(self, arg_name):
         values = getattr(self, arg_name)

@@ -24,6 +24,9 @@ EXTRA_FLAGS = [
     "-open",
     "-nfh -cg",
     "-nfh -sli -cg",
+    "-comru 90 -comw shock.possess:0.5",
+    "-comr 80.90.100 -comw jump:always:0.5,blitz.runic:5,none:0.3",
+    "-com 05999898989898989898989898 -comru 100 -comw slot:never -scc",
 ]
 
 # builds the real parser, then prints its on/off flags instead of parsing sys.argv

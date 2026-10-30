@@ -7,7 +7,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def parse_flags(*flags):
     # args/arguments.py parses the given flags and prints the canonical flag string,
-    # which exercises the whole -com interface without needing a rom
+    # which exercises the whole command interface without needing a rom
     return subprocess.run(
         [sys.executable, os.path.join("args", "arguments.py"), "-i", "rom.smc", *flags],
         cwd = REPO_ROOT,
@@ -16,456 +16,90 @@ def parse_flags(*flags):
         timeout = 60,
     )
 
-# drafts 24 skill slots out of a pool of 5 commands, which forces repeated refills and,
-# often, a refill triggered by a leftover the drafting character already has
-DRAFT_INVARIANTS = """
-import sys, types, collections
-sys.argv = ["wc.py", "-i", "rom.smc", "-comfru", "0.0.0"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
+def run_script(script, timeout = 300):
+    return subprocess.run([sys.executable, "-c", script], cwd = REPO_ROOT,
+                          capture_output = True, text = True, timeout = timeout)
 
-from constants.commands import name_id
-from data.commands import Commands
-
-MORPH = name_id["Morph"]
-POOL = [MORPH] + list(range(100, 104))
-CHARACTERS, SLOTS = list(range(6)), 4
-
-for trial in range(2000):
-    skills = Commands([]).draft_skills(CHARACTERS, {c : SLOTS for c in CHARACTERS}, list(POOL))
-    for character in CHARACTERS:
-        drafted = skills[character]
-        assert len(drafted) == SLOTS, f"dropped a slot: {drafted}"
-        assert len(set(drafted)) == SLOTS, f"duplicate command: {drafted}"
-        assert all(command in POOL for command in drafted), drafted
-    assert sum(MORPH in skills[c] for c in CHARACTERS) <= 1, "morph drafted more than once"
-print("ok")
-"""
-
-# behavioral invariants for the -com pr/pru probability modes, run against fake
-# characters (no rom needed). declared: fight/item/magic/possess at 100%, blitz
-# at 0%; rage excluded via -rec. every character must therefore hold exactly
-# fight/possess/magic/item in menu order, with nothing backfilled.
-PR_INVARIANTS = """
-import sys, types
-sys.argv = ["wc.py", "-i", "rom.smc", "-compr", "0.1.2.28.10", "100.100.100.100.0", "-rec", "16"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-GAU = 11
-
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    for i in c.full_random_characters():
-        cmds = chars[i].commands
-        if i == GAU:
-            # gau never gets fight from a probability roll, even at 100%; the
-            # freed slot backfills and the rest keep their menu order
-            assert 0 not in cmds and cmds[0] == 28 and cmds[2:] == [2, 1], \
-                f"gau menu order broken: {cmds}"
-        else:
-            assert cmds == [0, 28, 2, 1], f"menu order broken: {cmds}"
-print("ok")
-"""
-
-# six declarations at equal likelihood: each character rolls exactly four of the
-# six (the group cap), never a -rec excluded command, and never a duplicate.
-PR_CAP_INVARIANTS = """
-import sys, types
-sys.argv = ["wc.py", "-i", "rom.smc", "-compru", "0.1.2.27.28.29", "50.50.50.50.50.50", "-rec", "16"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-DECLARED = {0, 1, 2, 27, 28, 29}
-NONE = name_id["None"]
-RAGE = name_id["Rage"]
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-seen_over_four = False
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    for i in c.full_random_characters():
-        cmds = chars[i].commands
-        real = [x for x in cmds if x != NONE]
-        assert len(cmds) == 4, cmds
-        assert len(set(real)) == len(real), f"duplicate command: {cmds}"
-        assert RAGE not in real, f"excluded command dealt: {cmds}"
-        declared_held = [x for x in real if x in DECLARED]
-        assert len(declared_held) <= 4, f"cap exceeded: {cmds}"
-print("ok")
-"""
-
-# a declared None (97) claims a slot and stays empty: with none at 100% and
-# three 100% commands, every character has exactly one empty slot, no backfill.
-PR_NONE_INVARIANTS = """
-import sys, types
-sys.argv = ["wc.py", "-i", "rom.smc", "-compr", "5.7.13.97", "100.100.100.100"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-NONE = name_id["None"]
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    for i in c.full_random_characters():
-        cmds = chars[i].commands
-        real = [x for x in cmds if x != NONE]
-        assert sorted(real) == [5, 7, 13], f"expected steal/swdtech/sketch + empty: {cmds}"
-print("ok")
-"""
-
-# a declared morph is dealt only by its roll: at 50% morph plus unique backfill,
-# no character may ever hold two morphs and backfill must never add one.
-PR_MORPH_INVARIANTS = """
-import sys, types
-sys.argv = ["wc.py", "-i", "rom.smc", "-compru", "3", "50"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-MORPH = name_id["Morph"]
-NONE = name_id["None"]
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    morph_total = 0
-    for i in c.full_random_characters():
-        cmds = chars[i].commands
-        real = [x for x in cmds if x != NONE]
-        assert len(real) == 4, f"pru backfill left a hole: {cmds}"
-        assert cmds.count(MORPH) <= 1, f"double morph: {cmds}"
-        morph_total += cmds.count(MORPH)
-    assert morph_total <= 1, f"morph on {morph_total} characters"
-print("ok")
-"""
-
-
-# at 100% every character WINS the morph roll; exactly one may keep it and
-# the rest must backfill to a full menu.
-PR_MORPH_PARTYWIDE = """
-import sys, types
-sys.argv = ["wc.py", "-i", "rom.smc", "-compru", "3", "100"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-MORPH = name_id["Morph"]
-NONE = name_id["None"]
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-keepers = set()
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    morph_total = 0
-    for i in c.full_random_characters():
-        cmds = chars[i].commands
-        real = [x for x in cmds if x != NONE]
-        assert len(real) == 4, f"backfill left a hole after morph strip: {cmds}"
-        if MORPH in cmds:
-            morph_total += cmds.count(MORPH)
-            keepers.add(i)
-    assert morph_total == 1, f"expected exactly one morph, got {morph_total}"
-assert len(keepers) > 1, f"morph keeper should vary by roll, always {keepers}"
-print("ok")
-"""
-
-
-# composed mode: -com explicit picks + -compr rolls + backfill. terra gets an
-# explicit steal, locke holds a slot empty (97), cyan marks a unique-backfill
-# slot (98), everyone else is 99; possess is declared at 100%.
-COMPOSED_INVARIANTS = """
-import sys, types
-sys.argv = ["wc.py", "-i", "rom.smc",
-            "-com", "05979899999999999999999999", "-compr", "28", "100"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-STEAL = name_id["Steal"]
-POSSESS = name_id["Possess"]
-NONE = name_id["None"]
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    for i in c.full_random_characters():
-        cmds = chars[i].commands
-        real = [x for x in cmds if x != NONE]
-        assert len(set(real)) == len(real), f"duplicate: {cmds}"
-        assert POSSESS in real, f"100% possess missing: {cmds}"
-    terra, locke, cyan = chars[0].commands, chars[1].commands, chars[2].commands
-    assert STEAL in terra, f"explicit steal missing: {terra}"
-    assert len([x for x in terra if x != NONE]) == 4, f"terra not full: {terra}"
-    assert len([x for x in locke if x != NONE]) == 3, f"locke 97 slot not empty: {locke}"
-    assert len([x for x in cyan if x != NONE]) == 4, f"cyan not full: {cyan}"
-print("ok")
-"""
-
-
-# unique is unique across the seed. every skill declared (morph roll-only),
-# possess excluded: 13 skill slots from 19 backfillable skills, so no skill may
-# ever sit on two characters -- rolled or backfilled.
-PRU_SEED_UNIQUE = """
-import sys, types, collections
-sys.argv = ["wc.py", "-i", "rom.smc", "-compru",
-            "00.02.01.10.06.14.19.24.26.22.12.29.03.16.11.27.13.15.05.07.08.09.23",
-            "100.100.100.12.10.10.12.12.10.12.12.12.11.12.10.2.10.12.10.12.12.12.12", "-rec", "28"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-COMMON = {name_id["Fight"], name_id["Magic"], name_id["Item"], name_id["None"]}
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-for trial in range(500):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    skills = collections.Counter(x for i in c.full_random_characters()
-                                 for x in chars[i].commands if x not in COMMON)
-    assert sum(skills.values()) == 13, skills
-    assert max(skills.values()) == 1, f"skill dealt twice: {skills}"
-    assert name_id["Possess"] not in skills, skills
-print("ok")
-"""
-
-# a 100% skill under -compru goes to one character (until the pool runs dry),
-# not to everyone; the characters roll in a random order, so the holder varies.
-PRU_ROLLED_ONCE = """
-import sys, types
-sys.argv = ["wc.py", "-i", "rom.smc", "-compru", "0.2.1.5", "100.100.100.100"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-STEAL = name_id["Steal"]
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-holders = set()
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    with_steal = [i for i in c.full_random_characters() if STEAL in chars[i].commands]
-    assert len(with_steal) == 1, f"steal on {with_steal}"
-    holders.update(with_steal)
-assert len(holders) > 1, f"steal holder should vary, always {holders}"
-print("ok")
-"""
-
-# 48 skill slots (-comfru 0.0.0) from 21 skills: the pool cycles, and no skill
-# is dealt again while another legal skill has been dealt fewer times.
-FRU_POOL_CYCLES = """
-import sys, types, collections
-sys.argv = ["wc.py", "-i", "rom.smc", "-comfru", "0.0.0", "-rec", "28"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id, RANDOM_POSSIBLE_COMMANDS
-from data.commands import Commands
-
-MORPH, NONE = name_id["Morph"], name_id["None"]
-LEGAL = {name_id[n] for n in RANDOM_POSSIBLE_COMMANDS} - {name_id["Possess"], MORPH}
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    skills = collections.Counter(x for i in c.full_random_characters()
-                                 for x in chars[i].commands if x != NONE)
-    assert skills[MORPH] <= 1, skills
-    counts = [skills[x] for x in LEGAL]
-    assert max(counts) - min(counts) <= 1, f"a skill was dealt again before another caught up: {skills}"
-print("ok")
-"""
-
-# rolls and draft share one count: five skills at 100% roll first, the draft
-# fills the rest of the 48 slots, and every legal skill stays within one deal
-# of every other (a rolled skill counted twice would fall behind).
-PRU_POOL_CYCLES = """
-import sys, types, collections
-sys.argv = ["wc.py", "-i", "rom.smc", "-compru", "5.6.7.8.9", "100.100.100.100.100",
-            "-comfru", "0.0.0", "-rec", "28"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id, RANDOM_POSSIBLE_COMMANDS
-from data.commands import Commands
-
-MORPH, NONE = name_id["Morph"], name_id["None"]
-LEGAL = {name_id[n] for n in RANDOM_POSSIBLE_COMMANDS} - {name_id["Possess"], MORPH}
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    skills = collections.Counter(x for i in c.full_random_characters()
-                                 for x in chars[i].commands if x != NONE)
-    counts = [skills[x] for x in LEGAL]
-    assert max(counts) - min(counts) <= 1, f"rolled and drafted skills out of step: {skills}"
-print("ok")
-"""
-
-# unique slots never repeat any skill already in the seed: terra's explicit
-# steal and locke's random (99) pick are both off limits to the 98 draws.
-COMPOSED_UNIQUE = """
-import sys, types, collections
-sys.argv = ["wc.py", "-i", "rom.smc",
-            "-com", "05999898989898989898989898", "-comfru", "100.100.100"]
-import args
-sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = False
-
-from constants.commands import name_id
-from data.commands import Commands
-
-COMMON = {name_id["Fight"], name_id["Magic"], name_id["Item"], name_id["None"]}
-
-class FakeChar:
-    def __init__(self):
-        self.commands = [0, 0, 0, 0]
-
-for trial in range(300):
-    chars = [FakeChar() for _ in range(0x20)]
-    c = Commands(chars)
-    c.mod_probability_random_commands()
-    skills = [x for i in c.full_random_characters() for x in chars[i].commands if x not in COMMON]
-    assert len(skills) == 13, skills
-    terra_and_locke = [x for i in (0, 1) for x in chars[i].commands if x not in COMMON]
-    drafted = [x for i in c.full_random_characters()[2:] for x in chars[i].commands if x not in COMMON]
-    assert len(set(drafted)) == len(drafted), f"98 draws repeated: {drafted}"
-    assert not set(drafted) & set(terra_and_locke), f"98 repeated an earlier pick: {skills}"
-print("ok")
-"""
-
-
-# suplex a train guarantees one blitz, but never a second one: blitz already
-# rolled or picked explicitly counts, the forced blitz takes a backfill slot (so
-# unique seeds stay unique), and with no backfill slot left a rolled skill gives
-# way. run with the objective switched on; FLAGS and ONE_HOLDER are filled in.
-SUPLEX_BLITZ = """
-import sys, types, collections
+# runs the command assignment SEEDS times on fake characters (no rom needed) and
+# hands every seed's menus to CHECK, then FINISH. FLAGS, SEEDS, SUPLEX, CHECK and
+# FINISH are filled in per test
+HARNESS = """
+import sys, types, collections, random
 sys.argv = ["wc.py", "-i", "rom.smc"] + FLAGS
 import args
 sys.modules["objectives"] = types.ModuleType("objectives")
-sys.modules["objectives"].suplex_train_condition_exists = True
+sys.modules["objectives"].suplex_train_condition_exists = SUPLEX
 
-from constants.commands import name_id
+from constants.commands import name_id, id_name, RANDOM_POSSIBLE_COMMANDS
 from data.commands import Commands
 
-BLITZ, NONE = name_id["Blitz"], name_id["None"]
-COMMON = {name_id["Fight"], name_id["Magic"], name_id["Item"], NONE}
+FIGHT, MAGIC, ITEM, NONE = name_id["Fight"], name_id["Magic"], name_id["Item"], name_id["None"]
+COMMON = {FIGHT, MAGIC, ITEM, NONE}
+SKILLS = {name_id[name] for name in RANDOM_POSSIBLE_COMMANDS}
+GAU = 11
 
 class FakeChar:
     def __init__(self):
         self.commands = [0, 0, 0, 0]
 
-for trial in range(300):
+PICKS = list(args.character_commands)   # mod_commands rewrites the list in place
+
+def build():
+    args.character_commands[:] = PICKS
+    args.group_modules["commands"].resolve_random_weights(args)    # each seed draws its own
     chars = [FakeChar() for _ in range(0x20)]
     c = Commands(chars)
-    c.mod_probability_random_commands()
-    menus = [chars[i].commands for i in c.full_random_characters()]
-    holders = [menu.count(BLITZ) for menu in menus if BLITZ in menu]
-    assert holders, f"no blitz: {menus}"
-    assert max(holders) == 1, f"blitz twice on one character: {menus}"
-    if ONE_HOLDER:
-        assert len(holders) == 1, f"blitz on {len(holders)} characters: {menus}"
-    assert all(NONE not in menu for menu in menus), f"slot left empty: {menus}"
-    if UNIQUE:
-        skills = collections.Counter(x for menu in menus for x in menu if x not in COMMON)
-        assert max(skills.values()) == 1, f"skill dealt twice: {skills}"
+    if args.commands_probability_mode:
+        c.mod_probability_random_commands()
+        return [chars[i].commands for i in c.full_random_characters()]
+    c.mod_commands()
+    return [[chars[i].commands[1]] for i in range(11)] + [chars[GAU].commands[:2]]
+
+random.seed(SEED)
+state = collections.Counter()
+for trial in range(SEEDS):
+    menus = build()
+    CHECK
+FINISH
 print("ok")
 """
 
-SUPLEX_CASES = (
-    # declared blitz at 100% under -compru: rolled once, never forced again
-    ("rolled", ["-compru", "10", "100", "-comfru", "100.100.100"], True, True),
-    # explicit -com blitz for terra plus unique backfill
-    ("explicit", ["-com", "10989898989898989898989898", "-comfru", "100.100.100"], True, True),
-    # blitz excluded from backfill is still forced in, into a backfill slot
-    ("excluded", ["-comfru", "100.100.100", "-rec", "10"], True, True),
-    # every slot rolled at 100%: a rolled skill gives way to the forced blitz
-    ("no_backfill", ["-compr", "00.02.01.05.06", "100.100.100.100.100", "-rec", "10"], True, False),
-    # -compr rolls blitz independently (several holders are fine), never twice on one menu
-    ("compr_rolls", ["-compr", "10", "50", "-comfr", "100.100.100"], False, False),
-)
+def harness(flags, check, finish = "", seeds = 300, suplex = False, seed = 1):
+    indent = lambda code: code.replace("\n", "\n    ")
+    script = HARNESS.replace("CHECK", indent(check)).replace("FINISH", finish)
+    return (script.replace("FLAGS", repr(flags)).replace("SEEDS", str(seeds))
+            .replace("SUPLEX", str(suplex)).replace("SEED", str(seed)))
+
+# every menu: four slots, no command twice, Gau never Fight, Morph on one character at most
+BASIC_CHECKS = """
+for index, menu in enumerate(menus):
+    real = [x for x in menu if x != NONE]
+    assert len(real) == len(set(real)), f"command twice: {menu}"
+    if index == GAU and args.commands_probability_mode:
+        assert FIGHT not in menu, f"gau got fight: {menu}"
+assert sum(name_id["Morph"] in menu for menu in menus) <= 1, f"morph twice: {menus}"
+"""
+
+# no skill repeats while another legal skill is unused
+UNIQUE_CHECK = """
+skills = collections.Counter(x for menu in menus for x in menu if x in SKILLS)
+legal = [s for s in SKILLS if args.command_weights_map[s] > 0]
+if len(skills) < len(legal):
+    assert max(skills.values()) == 1, f"skill dealt twice early: {skills}"
+"""
+
+# seed (or per character) frequency of every skill, printed as KEY=value for the test to read
+def frequency_finish(per_character = False):
+    return f"""
+for skill in sorted(SKILLS):
+    print(f"{{id_name[skill]}}={{state[skill] / SEEDS / {12 if per_character else 1}:.5f}}")
+"""
+
+COUNT_SEED = "state.update({x for menu in menus for x in menu})"
+COUNT_CHARACTER = "state.update(x for menu in menus for x in menu)"
+
+def frequencies(output):
+    return {line.split("=")[0] : float(line.split("=")[1]) for line in output.splitlines() if "=" in line}
 
 
 class TestCommandsFlag(unittest.TestCase):
@@ -482,150 +116,304 @@ class TestCommandsFlag(unittest.TestCase):
         if expected is not None:
             self.assertIn(expected, result.stderr)
 
+    def assert_script(self, script):
+        result = run_script(script)
+        self.assertEqual(result.returncode, 0, msg = result.stderr[-3000:])
+        self.assertIn("ok", result.stdout)
+        return result.stdout
+
+    # --- -com --------------------------------------------------------------
+
     def test_character_command_ids(self):
         self.assert_accepted("-com", "03050708091011121315191617", expected = "-com 03050708091011121315191617")
         self.assert_accepted("-com", "99999999999999999999999999", expected = "-com 99999999999999999999999999")
 
     def test_character_command_ids_rejected_at_parse(self):
-        # ids generation can't honor must fail at parse time, not as a raw
-        # ValueError mid-build: Magic (02) and Item (01) aren't explicit picks,
-        # and Leap (17) is only legal in Gau's second slot (index 12)
+        # ids generation can't honor must fail at parse time: Magic (02) and Item (01)
+        # aren't explicit picks, and Leap (17) is only legal in Gau's second slot
         self.assert_rejected("-com", "02" + "99" * 12, expected = "not a valid command id")
         self.assert_rejected("-com", "01" + "99" * 12, expected = "not a valid command id")
         self.assert_rejected("-com", "17" + "99" * 12, expected = "not a valid command id")
         self.assert_accepted("-com", "99" * 12 + "17", expected = "-com " + "99" * 12 + "17")
-
-    def test_full_random_modes(self):
-        self.assert_accepted("-comfr", "10.50.90", expected = "-comfr 10.50.90")
-        self.assert_accepted("-comfru", "0.0.0", expected = "-comfru 0.0.0")
-
-    def test_retired_com_modes_rejected(self):
-        # the old '-com fr/pr ...' meta-mode syntax points at the new flags
-        self.assert_rejected("-com", "fr", "10.50.90", expected = "use -comfr")
-        self.assert_rejected("-com", "pru", "3", "50", expected = "use -compru")
+        self.assert_rejected("-com", "0305070809", expected = "must be 26 digits")
 
     def test_no_commands_flag(self):
         self.assertNotIn("-com", self.assert_accepted())
         self.assertNotIn("-com", self.assert_accepted("-com"))
 
-    def test_family_composition(self):
-        # -com composes with the probability flags; each emits its own flag
-        out = self.assert_accepted("-com", "05999999999999999999999999", "-comfr", "50.50.50")
+    # --- -comr / -comru ----------------------------------------------------
+
+    def test_random_modes(self):
+        self.assert_accepted("-comr", "10.50.90", expected = "-comr 10.50.90")
+        self.assert_accepted("-comru", "0.0.0", expected = "-comru 0")
+        # one percent covers all three, and three equal percents print as one
+        self.assert_accepted("-comru", "90", expected = "-comru 90")
+        self.assert_accepted("-comr", "90.90.90", expected = "-comr 90")
+        out = self.assert_accepted("-com", "05999999999999999999999999", "-comr", "50")
         self.assertIn("-com 05999999999999999999999999", out)
-        self.assertIn("-comfr 50.50.50", out)
-        # -comfr folds into -compr as extra declarations; both still emitted
-        out = self.assert_accepted("-compr", "28", "100", "-comfr", "50.50.50")
-        self.assertIn("-compr 28 100", out)
-        self.assertIn("-comfr 50.50.50", out)
-        # unique variants pair up
-        self.assert_accepted("-compru", "28", "100", "-comfru", "50.50.50")
+        self.assertIn("-comr 50", out)
 
-    def test_family_conflicts_rejected(self):
-        self.assert_rejected("-comfr", "10.50.90", "-comfru", "10.50.90",
-                             expected = "-comfr and -comfru are incompatible")
-        self.assert_rejected("-compr", "28", "100", "-compru", "28", "100",
-                             expected = "-compr and -compru are incompatible")
-        self.assert_rejected("-comfr", "10.50.90", "-compru", "28", "100",
-                             expected = "cannot mix unique and non-unique")
-        # an id declared by both -comfr and -compr is a conflict
-        self.assert_rejected("-comfr", "10.50.90", "-compr", "0.28", "100.100",
-                             expected = "declared by both")
+    def test_random_modes_rejected(self):
+        self.assert_rejected("-comr", "10", "-comru", "10", expected = "-comr and -comru are incompatible")
+        self.assert_rejected("-comr", "10.50", expected = "one percent chance or 3")
+        self.assert_rejected("-comr", "10.50.101", expected = "must be between 0 and 100")
+        self.assert_rejected("-comru", "10.50.abc", expected = "not a valid percent chance")
 
-    def test_unique_draft_refills(self):
-        result = subprocess.run(
-            [sys.executable, "-c", DRAFT_INVARIANTS],
-            cwd = REPO_ROOT,
-            capture_output = True,
-            text = True,
-            timeout = 120,
-        )
-        self.assertEqual(result.returncode, 0, msg = result.stderr)
-        self.assertIn("ok", result.stdout)
+    def test_retired_flags_rejected(self):
+        # the dev-only flags these replace point at the new form
+        self.assert_rejected("-comfr", "10.50.90", expected = "use -comr")
+        self.assert_rejected("-comfru", "10.50.90", expected = "use -comru")
+        self.assert_rejected("-compr", "0.28", "50.100", expected = "-compr has been replaced")
+        self.assert_rejected("-compru", "28", "100", expected = "-compru has been replaced")
+        self.assert_rejected("-rec", "28.27", expected = "use -comw NAME:0")
+        self.assert_rejected("-com", "fr", "10.50.90", expected = "has been replaced")
 
-    def test_invalid_values_rejected(self):
-        self.assert_rejected("-com", "0305070809", expected = "must be 26 digits")
-        self.assert_rejected("-com", "03050708091011121315191650", expected = "not a valid command id")
-        self.assert_rejected("-comfr", "10.50", expected = "3 percent chances")
-        self.assert_rejected("-comfr", "10.50.101", expected = "must be between 0 and 100")
-        self.assert_rejected("-comfru", "10.50.abc", expected = "not a valid percent chance")
+    # --- -comw -------------------------------------------------------------
 
-    def test_probability_modes(self):
-        # ids are canonicalized to two digits; percents kept as given
-        self.assert_accepted("-compr", "0.1.2.28", "50.50.50.100",
-                             expected = "-compr 00.01.02.28 50.50.50.100")
-        self.assert_accepted("-compru", "0.1.2.27.28.29", "50.50.50.50.50.50",
-                             expected = "-compru 00.01.02.27.28.29 50.50.50.50.50.50")
-        # 97 declares a chance at an empty slot
-        self.assert_accepted("-compr", "97.10", "50.100", expected = "-compr 97.10 50.100")
+    def test_weights_parse(self):
+        # names ignore case and punctuation, ids work too; canonical form groups by
+        # weight (always first, then heaviest), skills in id order, names compacted
+        self.assert_accepted("-comru", "90", "-comw", "Shock.Possess:0.5", expected = "-comw shock.possess:0.5")
+        self.assert_accepted("-comru", "90", "-comw", "28.27:0.5", expected = "-comw shock.possess:0.5")
+        self.assert_accepted("-comr", "90", "-comw", "jump:always,blitz.runic:5,shock.possess:0.1",
+                             expected = "-comw jump:always,blitz.runic:5,shock.possess:0.1")
+        self.assert_accepted("-comr", "90", "-comw", "jump:always:0.5", expected = "-comw jump:always:0.5")
+        self.assert_accepted("-comr", "90", "-comw", "X-Magic.GPRain:rare,magitek:never",
+                             expected = "-comw xmagic.gprain:0.25,magitek:0")
+        self.assert_accepted("-comr", "90", "-comw", "none:0.5", expected = "-comw none:0.5")
+        # a weight of 1 is the default and drops out
+        self.assertNotIn("-comw", self.assert_accepted("-comr", "90", "-comw", "jump:1,lore:common"))
+        # -comw also applies to -com's random slots on its own
+        self.assert_accepted("-com", "99" * 13, "-comw", "slot:0", expected = "-comw slot:0")
 
-    def test_probability_invalid_rejected(self):
-        self.assert_rejected("-compr", "0.1.2", expected = "expected 2 arguments")
-        self.assert_rejected("-compr", "0.1.2", "50.50", expected = "3 command ids but 2 percent chances")
-        self.assert_rejected("-compr", "0.25", "50.50", expected = "not a valid probability command id")  # Summon
-        self.assert_rejected("-compr", "0.0", "50.50", expected = "duplicate probability command id")
-        self.assert_rejected("-compr", "0.abc", "50.50", expected = "not a valid command id")
-        self.assert_rejected("-compr", "0.1", "50.101", expected = "must be between 0 and 100")
-        self.assert_rejected("-comfr", "50.50", expected = "3 percent chances")
-        # a command cannot both have a probability and be excluded by -rec
-        self.assert_rejected("-compr", "0.16", "50.50", "-rec", "16",
-                             expected = "both given a probability and excluded by -rec")
+    def test_weights_other(self):
+        # other weighs every skill no entry names, wherever it is listed; the canonical
+        # form is the shortest, so the long list and its other form print (and seed) the same
+        from constants.commands import RANDOM_POSSIBLE_COMMANDS
+        everything_but_dance = ".".join(name for name in RANDOM_POSSIBLE_COMMANDS if name != "Dance")
+        for weights in ("dance:1,other:0", "other:never,dance:common", everything_but_dance + ":0"):
+            self.assert_accepted("-comru", "75", "-comw", weights, expected = "-comw dance:1,other:0")
+        self.assert_accepted("-comr", "90", "-comw", "jump:always,blitz:5,other:rare",
+                             expected = "-comw jump:always,blitz:5,other:0.25")
+        # a few off-default skills stay a plain list; other:1 is the default
+        self.assert_accepted("-comr", "90", "-comw", "shock.possess:rare,other:1",
+                             expected = "-comw shock.possess:0.25")
+        self.assertNotIn("other", self.assert_accepted("-comr", "90", "-comw", "shock.possess:rare"))
+        # -recN exclusions are named too
+        self.assert_accepted("-rec1", "28", "-comw", "jump:1,other:2", expected = "-comw jump:1,possess:0,other:2")
+        # ... but not the empty slot
+        self.assert_accepted("-comr", "90", "-comw", "other:0.5,none:0.5", expected = "-comw none:0.5,other:0.5")
 
-    def test_probability_invariants(self):
-        for name, script in (("pr", PR_INVARIANTS), ("cap", PR_CAP_INVARIANTS),
-                             ("none", PR_NONE_INVARIANTS), ("morph", PR_MORPH_INVARIANTS),
-                             ("morph_partywide", PR_MORPH_PARTYWIDE),
-                             ("composed", COMPOSED_INVARIANTS),
-                             ("pru_seed_unique", PRU_SEED_UNIQUE), ("pru_rolled_once", PRU_ROLLED_ONCE),
-                             ("fru_pool_cycles", FRU_POOL_CYCLES), ("pru_pool_cycles", PRU_POOL_CYCLES), ("composed_unique", COMPOSED_UNIQUE)):
-            with self.subTest(name):
-                result = subprocess.run(
-                    [sys.executable, "-c", script],
-                    cwd = REPO_ROOT,
-                    capture_output = True,
-                    text = True,
-                    timeout = 120,
-                )
-                self.assertEqual(result.returncode, 0, msg = result.stderr)
-                self.assertIn("ok", result.stdout)
+    def test_weights_other_rejected(self):
+        self.assert_rejected("-comw", "other.jump:0", expected = "must be a group of its own")
+        self.assert_rejected("-comw", "other:0,other:1", expected = "other is given a weight twice")
+        self.assert_rejected("-comw", "other:always", expected = "other cannot be always")
+        self.assert_rejected("-comw", "other:0", expected = "cannot give every")
 
-    def test_suplex_train_blitz(self):
-        for name, flags, one_holder, unique in SUPLEX_CASES:
-            with self.subTest(name):
-                script = (f"FLAGS = {flags!r}\nONE_HOLDER = {one_holder}\nUNIQUE = {unique}\n"
-                          + SUPLEX_BLITZ)
-                result = subprocess.run(
-                    [sys.executable, "-c", script],
-                    cwd = REPO_ROOT,
-                    capture_output = True,
-                    text = True,
-                    timeout = 120,
-                )
-                self.assertEqual(result.returncode, 0, msg = result.stderr)
-                self.assertIn("ok", result.stdout)
-
-    def test_random_exclude_dot_list(self):
-        # arbitrary-length dot-separated exclusions, re-emitted canonically
-        self.assert_accepted("-rec", "28.27", expected = "-rec 28.27")
-        self.assert_accepted("-rec", "05.07.10.16.13", expected = "-rec 05.07.10.16.13")
-        # single-digit input normalizes to two-digit canonical form
-        self.assert_accepted("-rec", "5.7", expected = "-rec 05.07")
-        # the none id (97) is dropped from the canonical string
-        self.assertNotIn("-rec", self.assert_accepted("-rec", "97"))
-
-    def test_random_exclude_legacy_wrappers(self):
-        # legacy -recN flags still parse and fold into the canonical -rec form
-        self.assert_accepted("-rec1", "28", "-rec2", "27", expected = "-rec 28.27")
-        self.assert_accepted("-rec3", "10", expected = "-rec 10")
-        # mixed usage: -rec values first, then the legacy flags in order
-        self.assert_accepted("-rec", "05", "-rec1", "28", expected = "-rec 05.28")
-
-    def test_random_exclude_invalid_rejected(self):
-        self.assert_rejected("-rec", "28.abc", expected = "not a valid command id")
-        self.assert_rejected("-rec", "01", expected = "not an excludable command id")  # Item
-        # excluding the whole random pool is rejected (would empty every draw)
+    def test_weights_rejected(self):
+        self.assert_rejected("-comw", "jump", expected = "must be GROUP:WEIGHT")
+        self.assert_rejected("-comw", "jump:abc", expected = "is not a weight")
+        self.assert_rejected("-comw", "jump:-1", expected = "must be a number >= 0")
+        self.assert_rejected("-comw", "summon:2", expected = "not a randomizable skill")
+        self.assert_rejected("-comw", "fight:2", expected = "set its chance with -comr/-comru")
+        self.assert_rejected("-comw", "00:2", expected = "set its chance with -comr/-comru")
+        self.assert_rejected("-comw", "jump:2,jump:3", expected = "given a weight twice")
+        self.assert_rejected("-comw", "none:always", expected = "cannot be always")
         from constants.commands import RANDOM_POSSIBLE_COMMANDS, name_id
         everything = ".".join(f"{name_id[name]:02}" for name in RANDOM_POSSIBLE_COMMANDS)
-        self.assert_rejected("-rec", everything, expected = "cannot exclude every")
+        self.assert_rejected("-comw", everything + ":0", expected = "cannot give every")
+
+    def test_weights_random(self):
+        # randomN: N skills drawn per seed from the unnamed ones; the flag keeps the group,
+        # named skills stay listed (naming one keeps it out of the draws), other:1 drops out
+        self.assert_accepted("-comru", "75", "-comw", "random:1,other:0", expected = "-comw random:1,other:0")
+        self.assert_accepted("-comru", "75", "-comw", "Random-3:1,other:0", expected = "-comw random3:1,other:0")
+        self.assert_accepted("-comr", "90", "-comw", "random:1,random2:1,other:0", expected = "-comw random3:1,other:0")
+        self.assert_accepted("-comr", "90", "-comw", "other:0,random2:rare,random:always,jump:1",
+                             expected = "-comw jump:1,random:always,random2:0.25,other:0")
+        self.assert_accepted("-comr", "90", "-comw", "random20:0", expected = "-comw random20:0")
+        self.assert_accepted("-comr", "90", "-comw", "random:0,other:1", expected = "-comw random:0")
+        self.assert_accepted("-rec1", "28", "-comw", "random:2", expected = "-comw possess:0,random:2")
+
+    def test_weights_random_rejected(self):
+        self.assert_rejected("-comw", "random.jump:0", expected = "random must be a group of its own")
+        self.assert_rejected("-comw", "random0:1", expected = "must draw at least one skill")
+        self.assert_rejected("-comw", "random22:0", expected = "draw 22 skills but only 21")
+        self.assert_rejected("-comw", "jump:1,random21:0", expected = "draw 21 skills but only 20")
+        self.assert_rejected("-comw", "random21:0", expected = "cannot give every")
+        self.assert_rejected("-comw", "random:0,other:0", expected = "cannot give every")
+
+    def test_legacy_exclusions(self):
+        # main's -recN flags still parse, as weight 0
+        self.assert_accepted("-rec1", "28", "-rec2", "27", expected = "-comw shock.possess:0")
+        self.assert_accepted("-rec3", "10", "-comw", "jump:2", expected = "-comw jump:2,blitz:0")
+        self.assert_rejected("-rec1", "28", "-comw", "possess:2", expected = "also excluded by -rec1")
+
+    # --- generation --------------------------------------------------------
+
+    def test_random_one_skill_for_everyone(self):
+        # random:1,other:0: every character's skill is the seed's one pick, which varies
+        # by seed and is never morph (one character only: everyone else would be empty)
+        check = BASIC_CHECKS + """
+skills = {x for menu in menus for x in menu if x in SKILLS}
+assert skills == set(args.command_random_picks[0]), (skills, args.command_random_picks)
+assert all(set(menu) & skills for menu in menus), menus
+state.update(skills)
+"""
+        finish = """
+assert name_id["Morph"] not in state, state
+assert len(state) == 20, state
+"""
+        self.assert_script(harness(["-comru", "75.0.100", "-comw", "random:1,other:0"], check, finish, seeds = 600))
+        # random20:0 leaves one skill the same way
+        check = """
+dealable = [s for s in SKILLS if args.command_weights_map[s] > 0]
+assert len(dealable) == 1 and dealable != [name_id["Morph"]], dealable
+"""
+        self.assert_script(harness(["-comru", "75", "-comw", "random20:0"], check, seeds = 600))
+
+    def test_random_pool_may_hold_morph(self):
+        # random2:1,other:0: morph can be one of the two (the other fills the rest)
+        check = BASIC_CHECKS + """
+picks = set(args.command_random_picks[0])
+assert len(picks) == 2 and {x for menu in menus for x in menu if x in SKILLS} <= picks, (picks, menus)
+state.update(picks)
+"""
+        self.assert_script(harness(["-comru", "75", "-comw", "random2:1,other:0"], check,
+                                   'assert state[name_id["Morph"]] > 0, state', seeds = 600))
+
+    def test_random_draws_follow_the_seed(self):
+        # the seed decides the picks: same seed, same picks; the flag string never changes
+        script = """
+import sys, io, contextlib
+sys.argv = ["wc.py", "-i", "rom.smc", "-s", sys.argv[1], "-comru", "75", "-comw", "random3:1,other:0"]
+with contextlib.redirect_stdout(io.StringIO()):
+    import args
+from constants.commands import name_id
+assert "-comw random3:1,other:0" in args.flags, args.flags
+assert args.blitz_command_possible == (name_id["Blitz"] in args.command_random_picks[0])
+print("picks", args.command_random_picks)
+"""
+        def picks(seed):
+            result = subprocess.run([sys.executable, "-c", script, seed], cwd = REPO_ROOT,
+                                    capture_output = True, text = True, timeout = 60)
+            self.assertEqual(result.returncode, 0, msg = result.stderr[-3000:])
+            return result.stdout.strip().splitlines()[-1]
+        self.assertEqual(picks("alpha"), picks("alpha"))
+        self.assertGreater(len({picks(seed) for seed in ("alpha", "beta", "gamma", "delta")}), 1)
+
+    def test_unique_invariants(self):
+        for flags in (["-comru", "90"], ["-comru", "0", "-comw", "possess:0"],
+                      ["-comru", "100", "-comw", "jump:always,shock.possess:0.1,slot:0"]):
+            with self.subTest(flags):
+                check = BASIC_CHECKS + UNIQUE_CHECK + """
+assert all(NONE not in menu for menu in menus), f"slot left empty: {menus}"
+assert not any(x in SKILLS and args.command_weights_map[x] == 0 for menu in menus for x in menu), menus
+for skill in args.command_always:
+    assert any(skill in menu for menu in menus), f"always skill missing: {menus}"
+"""
+                self.assert_script(harness(flags, check))
+
+    def test_repeat_invariants(self):
+        check = BASIC_CHECKS + """
+assert any(name_id["Jump"] in menu for menu in menus), "always jump missing"
+"""
+        self.assert_script(harness(["-comr", "90", "-comw", "jump:always:0.5"], check))
+
+    def test_composed_with_com(self):
+        # terra: explicit steal + three drawn; locke: 97 (empty) + 98 + basics; cyan..: 99s
+        check = BASIC_CHECKS + """
+terra, locke, cyan = menus[0], menus[1], menus[2]
+assert name_id["Steal"] in terra, f"explicit steal missing: {terra}"
+assert len([x for x in terra if x != NONE]) == 4, f"terra not full: {terra}"
+assert len([x for x in locke if x != NONE]) == 3, f"locke's 97 slot not empty: {locke}"
+assert len([x for x in cyan if x != NONE]) == 4, f"cyan not full: {cyan}"
+"""
+        self.assert_script(harness(["-com", "05979899999999999999999999", "-comr", "100"], check))
+        # 98 slots never repeat an explicit pick or each other while skills remain
+        check = """
+skills = [x for menu in menus for x in menu if x in SKILLS]
+assert len(skills) == 13, skills
+early = [x for menu in menus[:2] for x in menu if x in SKILLS]
+drafted = [x for menu in menus[2:] for x in menu if x in SKILLS]
+assert len(set(drafted)) == len(drafted), f"98 draws repeated: {drafted}"
+assert not set(drafted) & set(early), f"98 repeated an earlier pick: {skills}"
+"""
+        self.assert_script(harness(["-com", "05999898989898989898989898", "-comru", "100"], check))
+
+    def test_unique_cycles_when_slots_exceed_skills(self):
+        # 48 skill slots from 20 skills: every skill dealt before any is dealt a third time
+        check = """
+skills = collections.Counter(x for menu in menus for x in menu if x in SKILLS)
+assert max(skills.values()) - min(skills.values()) <= 1 or name_id["Morph"] in skills, skills
+assert all(NONE not in menu for menu in menus[:11]), menus
+"""
+        self.assert_script(harness(["-comru", "0", "-comw", "possess:0"], check))
+
+    def test_unique_weights_are_shares(self):
+        # weight 0.5 => half the seeds (within sampling noise), as long as the seed has room
+        out = self.assert_script(harness(["-comru", "100", "-comw", "shock.possess:0.5"], COUNT_SEED,
+                                         frequency_finish(), seeds = 3000))
+        freq = frequencies(out)
+        others = sum(freq[name] for name in ("Steal", "Jump", "Lore", "Blitz", "Tools")) / 5
+        self.assertAlmostEqual(freq["Shock"] / others, 0.5, delta = 0.05)
+        self.assertAlmostEqual(freq["Possess"] / others, 0.5, delta = 0.05)
+
+    def test_repeat_weights_are_per_character_ratios(self):
+        out = self.assert_script(harness(["-comr", "100", "-comw", "shock.possess:0.5,blitz:2"],
+                                         COUNT_CHARACTER, frequency_finish(True), seeds = 3000))
+        freq = frequencies(out)
+        others = sum(freq[name] for name in ("Steal", "Jump", "Lore", "Tools", "Sketch")) / 5
+        self.assertAlmostEqual(freq["Shock"] / others, 0.5, delta = 0.08)
+        self.assertAlmostEqual(freq["Blitz"] / others, 2.0, delta = 0.25)
+
+    def test_scaling_all_weights_changes_nothing(self):
+        # the same rng stream gives the same seed when every weight doubles
+        from constants.commands import RANDOM_POSSIBLE_COMMANDS
+        names = [name for name in RANDOM_POSSIBLE_COMMANDS if name not in ("Shock", "Possess")]
+        skill_key = lambda name: "".join(c for c in name.lower() if c.isalnum())
+        doubled = ".".join(skill_key(name) for name in names) + ":2,shock.possess:1"
+        for mode in ("-comr", "-comru"):
+            with self.subTest(mode):
+                outputs = []
+                for weights in ("shock.possess:0.5", doubled):
+                    out = self.assert_script(harness([mode, "90", "-comw", weights], "print(menus)", seeds = 50))
+                    outputs.append(out)
+                self.assertEqual(outputs[0], outputs[1])
+
+    def test_empty_slot_weight(self):
+        check = "state['empty'] += sum(menu.count(NONE) for menu in menus)"
+        out = self.assert_script(harness(["-comr", "100", "-comw", "none:2"], check,
+                                         "print(f\"empty={state['empty'] / SEEDS}\")", seeds = 2000))
+        # 13 skill slots (Gau has two), each empty with chance 2 / (2 + 20 skills)
+        self.assertAlmostEqual(frequencies(out)["empty"], 13 * 2 / 23, delta = 0.12)
+
+    def test_com_random_slots_use_weights(self):
+        out = self.assert_script(harness(["-com", "98" * 13, "-comw", "shock.possess:0.5"], COUNT_SEED,
+                                         frequency_finish(), seeds = 3000))
+        freq = frequencies(out)
+        others = sum(freq[name] for name in ("Steal", "Jump", "Lore", "Blitz", "Tools")) / 5
+        self.assertAlmostEqual(freq["Shock"] / others, 0.5, delta = 0.05)
+
+    def test_suplex_train_blitz(self):
+        # suplex a train guarantees one blitz -- even at weight 0 -- but never a
+        # second one on a character, and unique seeds stay unique
+        cases = (
+            (["-com", "10989898989898989898989898", "-comru", "100"], True),   # explicit blitz
+            (["-comru", "100", "-comw", "blitz:0"], True),                       # weight 0: still forced
+            (["-comr", "100", "-comw", "blitz:0"], True),
+            (["-comr", "100"], False),                                           # repeats: several holders fine
+        )
+        for flags, one_holder in cases:
+            with self.subTest(flags):
+                check = BASIC_CHECKS + f"""
+holders = [menu.count(name_id["Blitz"]) for menu in menus if name_id["Blitz"] in menu]
+assert holders, f"no blitz: {{menus}}"
+assert max(holders) == 1, f"blitz twice on one character: {{menus}}"
+if {one_holder}:
+    assert len(holders) == 1, f"blitz on {{len(holders)}} characters: {{menus}}"
+"""
+                self.assert_script(harness(flags, check, suplex = True))
 
 if __name__ == "__main__":
     unittest.main()

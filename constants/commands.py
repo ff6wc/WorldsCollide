@@ -41,15 +41,27 @@ RANDOM_UNIQUE_COMMAND = 98
 NONE_COMMAND = 97   # none command id is 3 digits in base 10 (255), use a custom 2 digit value for args
 
 # retired -com meta-mode prefixes ('-com fr 10.50.90'), recognized only to
-# print a migration error pointing at the -comfr/-comfru/-compr/-compru flags
+# print a migration error pointing at -comr/-comru/-comw
 RETIRED_COM_MODES = ["fr", "fru", "pr", "pru"]
 
-# command ids a probability can be declared for (-compr/-compru): every real
-# menu command the randomizer hands out (not Revert/Leap/Mimic/Row/Def/Summon
-# or the broken Empty slots), plus None (declared as 97, same as -com strings)
-PROBABILITY_EXCLUDED_NAMES = ["Revert", "Leap", "Mimic", "Row", "Def", "Summon", "Empty", "Empty?", "None"]
-PROBABILITY_COMMAND_IDS = [command_id for command_id, command_name in id_name.items()
-                           if command_name not in PROBABILITY_EXCLUDED_NAMES]
+# retired flags (replaced by -comr/-comru/-comw) and their value counts, recognized
+# only to print a migration error
+RETIRED_COMMAND_FLAGS = {"-comfr": None, "-comfru": None, "-compr": 2, "-compru": 2, "-rec": None}
+
+# -comw: named weights (relative to a standard skill's 1), and the guarantee keyword
+WEIGHT_TIERS = {
+    "common": 1.0,
+    "uncommon": 0.5,
+    "rare": 0.25,
+    "veryrare": 0.1,
+    "legendary": 0.03,
+    "never": 0.0,
+}
+ALWAYS = "always"
+# -comw group for every skill no other entry names ('dance:1,other:0')
+OTHER = "other"
+# -comw group of N skills drawn per seed from the unnamed ones ('random3:1,other:0')
+RANDOM_GROUP = "random"
 
 # every character has four command slots in their initialization data ($ed7ca2 - $ed7ca5)
 COMMAND_SLOT_COUNT = 4
